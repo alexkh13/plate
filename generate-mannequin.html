@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Mannequin Template Generator</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, sans-serif;
+      background: #f0f0f0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+    }
+    canvas {
+      border: 2px solid #ddd;
+      display: block;
+      margin: 20px auto;
+      background: white;
+    }
+    button {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      margin: 10px 0;
+      font-size: 16px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #4338ca;
+    }
+    #base64Output {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9fafb;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 11px;
+      word-wrap: break-word;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .success {
+      color: #059669;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 Professional Mannequin Template Generator</h1>
+    <p>High-quality canvas-based mannequin for outfit previews (900x1600px, 9:16 ratio)</p>
+
+    <canvas id="mannequinCanvas" width="900" height="1600"></canvas>
+
+    <button onclick="downloadPNG()">Download PNG File</button>
+    <button onclick="generateBase64()">Generate Base64 for Code</button>
+
+    <div id="status"></div>
+    <div id="base64Output" style="display: none;"></div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('mannequinCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Draw professional mannequin
+    function drawMannequin() {
+      const width = 900;
+      const height = 1600;
+
+      // Pure white background
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, width, height);
+
+      // Mannequin measurements (fashion proportions: 8.5 heads tall)
+      const headHeight = height / 9.5;
+      const centerX = width / 2;
+
+      // Base skin tone
+      const skinColor = '#E8D5C4';
+      const shadowColor = '#D4C4B0';
+      const highlightColor = '#F0E4D4';
+
+      // Enable anti-aliasing
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      // HEAD
+      ctx.save();
+      const headY = headHeight * 0.8;
+      const headWidth = headHeight * 0.6;
+
+      // Head shadow
+      ctx.fillStyle = shadowColor;
+      ctx.beginPath();
+      ctx.ellipse(centerX + 3, headY + 3, headWidth/2, headHeight/2, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head
+      ctx.fillStyle = skinColor;
+      ctx.beginPath();
+      ctx.ellipse(centerX, headY, headWidth/2, headHeight/2, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head highlight
+      ctx.fillStyle = highlightColor;
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.ellipse(centerX - 15, headY - 20, headWidth/3, headHeight/3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+      ctx.restore();
+
+      // NECK
+      const neckY = headY + headHeight/2;
+      const neckHeight = headHeight * 0.4;
+      const neckWidth = headWidth * 0.5;
+
+      ctx.fillStyle = skinColor;
+      ctx.beginPath();
+      ctx.moveTo(centerX - neckWidth/2, neckY);
+      ctx.lineTo(centerX - neckWidth/2 + 10, neckY + neckHeight);
+      ctx.lineTo(centerX + neckWidth/2 - 10, neckY + neckHeight);
+      ctx.lineTo(centerX + neckWidth/2, neckY);
+      ctx.closePath();
+      ctx.fill();
+
+      // Neck shadow
+      ctx.fillStyle = shadowColor;
+      ctx.globalAlpha = 0.2;
+      ctx.fillRect(centerX - neckWidth/2, neckY + neckHeight/2, neckWidth, neckHeight/2);
+      ctx.globalAlpha = 1.0;
+
+      // SHOULDERS & CHEST
+      const shoulderY = neckY + neckHeight;
+      const shoulderWidth = width * 0.45;
+      const chestHeight = headHeight * 2.2;
+
+      // Shoulders
+      ctx.fillStyle = skinColor;
+      ctx.beginPath();
+      ctx.moveTo(centerX - shoulderWidth/2, shoulderY);
+      ctx.quadraticCurveTo(centerX - shoulderWidth/2, shoulderY - 20, centerX - shoulderWidth/2 + 20, shoulderY);
+      ctx.lineTo(centerX - shoulderWidth/2 + 40, shoulderY + 80);
+      ctx.lineTo(centerX + shoulderWidth/2 - 40, shoulderY + 80);
+      ctx.quadraticCurveTo(centerX + shoulderWidth/2, shoulderY - 20, centerX + shoulderWidth/2, shoulderY);
+      ctx.lineTo(centerX + shoulderWidth/2 - 20, shoulderY);
+      ctx.quadraticCurveTo(centerX, shoulderY + 20, centerX - shoulderWidth/2 + 20, shoulderY);
+      ctx.closePath();
+      ctx.fill();
+
+      // TORSO
+      const torsoY = shoulderY + 80;
+      const torsoWidth = width * 0.35;
+      const waistWidth = width * 0.28;
+      const torsoHeight = headHeight * 3;
+
+      const gradient1 = ctx.createLinearGradient(centerX - torsoWidth/2, torsoY, centerX + torsoWidth/2, torsoY);
+      gradient1.addColorStop(0, shadowColor);
+      gradient1.addColorStop(0.5, skinColor);
+      gradient1.addColorStop(1, shadowColor);
+
+      ctx.fillStyle = gradient1;
+      ctx.beginPath();
+      ctx.moveTo(centerX - torsoWidth/2, torsoY);
+      ctx.quadraticCurveTo(centerX - waistWidth/2, torsoY + torsoHeight * 0.6, centerX - waistWidth/2, torsoY + torsoHeight);
+      ctx.lineTo(centerX + waistWidth/2, torsoY + torsoHeight);
+      ctx.quadraticCurveTo(centerX + waistWidth/2, torsoY + torsoHeight * 0.6, centerX + torsoWidth/2, torsoY);
+      ctx.closePath();
+      ctx.fill();
+
+      // Chest definition
+      ctx.strokeStyle = shadowColor;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.3;
+      ctx.beginPath();
+      ctx.moveTo(centerX - torsoWidth/2 + 40, torsoY + 40);
+      ctx.quadraticCurveTo(centerX, torsoY + 60, centerX + torsoWidth/2 - 40, torsoY + 40);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+
+      // ARMS
+      const armWidth = 55;
+      const armLength = headHeight * 3.8;
+
+      // Left arm
+      ctx.fillStyle = skinColor;
+      ctx.beginPath();
+      ctx.roundRect(centerX - shoulderWidth/2 - armWidth, shoulderY, armWidth, armLength, [20]);
+      ctx.fill();
+
+      // Left arm shadow
+      ctx.fillStyle = shadowColor;
+      ctx.globalAlpha = 0.2;
+      ctx.fillRect(centerX - shoulderWidth/2 - armWidth + armWidth * 0.6, shoulderY, armWidth * 0.4, armLength);
+      ctx.globalAlpha = 1.0;
+
+      // Right arm
+      ctx.fillStyle = skinColor;
+      ctx.beginPath();
+      ctx.roundRect(centerX + shoulderWidth/2, shoulderY, armWidth, armLength, [20]);
+      ctx.fill();
+
+      // Right arm shadow
+      ctx.fillStyle = shadowColor;
+      ctx.globalAlpha = 0.2;
+      ctx.fillRect(centerX + shoulderWidth/2, shoulderY, armWidth * 0.4, armLength);
+      ctx.globalAlpha = 1.0;
+
+      // HANDS
+      const handY = shoulderY + armLength;
+
+      // Left hand
+      ctx.fillStyle = skinColor;
+      ctx.beginPath();
+      ctx.ellipse(centerX - shoulderWidth/2 - armWidth/2, handY + 35, 32, 42, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right hand
+      ctx.beginPath();
+      ctx.ellipse(centerX + shoulderWidth/2 + armWidth/2, handY + 35, 32, 42, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // HIPS
+      const hipsY = torsoY + torsoHeight;
+      const hipsWidth = width * 0.32;
+      const hipsHeight = headHeight * 0.8;
+
+      ctx.fillStyle = skinColor;
+      ctx.beginPath();
+      ctx.ellipse(centerX, hipsY + hipsHeight/2, hipsWidth/2, hipsHeight/2, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // LEGS
+      const legsY = hipsY + hipsHeight;
+      const legWidth = 72;
+      const legGap = 20;
+      const legLength = headHeight * 4.5;
+
+      // Left leg
+      ctx.fillStyle = skinColor;
+      ctx.beginPath();
+      ctx.roundRect(centerX - legWidth - legGap/2, legsY, legWidth, legLength, [30]);
+      ctx.fill();
+
+      // Left leg shadow
+      ctx.fillStyle = shadowColor;
+      ctx.globalAlpha = 0.2;
+      ctx.fillRect(centerX - legWidth - legGap/2 + legWidth * 0.6, legsY, legWidth * 0.4, legLength);
+      ctx.globalAlpha = 1.0;
+
+      // Right leg
+      ctx.fillStyle = skinColor;
+      ctx.beginPath();
+      ctx.roundRect(centerX + legGap/2, legsY, legWidth, legLength, [30]);
+      ctx.fill();
+
+      // Right leg shadow
+      ctx.fillStyle = shadowColor;
+      ctx.globalAlpha = 0.2;
+      ctx.fillRect(centerX + legGap/2, legsY, legWidth * 0.4, legLength);
+      ctx.globalAlpha = 1.0;
+
+      // Knee definition
+      ctx.strokeStyle = shadowColor;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.2;
+
+      // Left knee
+      ctx.beginPath();
+      ctx.arc(centerX - legWidth/2 - legGap/2, legsY + legLength * 0.55, 25, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Right knee
+      ctx.beginPath();
+      ctx.arc(centerX + legWidth/2 + legGap/2, legsY + legLength * 0.55, 25, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+
+      // FEET
+      const feetY = legsY + legLength;
+      const footWidth = 48;
+      const footHeight = 35;
+
+      // Left foot
+      ctx.fillStyle = skinColor;
+      ctx.beginPath();
+      ctx.ellipse(centerX - legWidth/2 - legGap/2, feetY + footHeight/2, footWidth/2, footHeight/2, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right foot
+      ctx.beginPath();
+      ctx.ellipse(centerX + legWidth/2 + legGap/2, feetY + footHeight/2, footWidth/2, footHeight/2, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Add subtle overall shading for 3D effect
+      const overallGradient = ctx.createLinearGradient(0, 0, width, 0);
+      overallGradient.addColorStop(0, 'rgba(0, 0, 0, 0.03)');
+      overallGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.02)');
+      overallGradient.addColorStop(1, 'rgba(0, 0, 0, 0.03)');
+      ctx.fillStyle = overallGradient;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    // Polyfill for roundRect
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
+        const radius = Array.isArray(radii) ? radii[0] : radii;
+        this.beginPath();
+        this.moveTo(x + radius, y);
+        this.lineTo(x + w - radius, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + radius);
+        this.lineTo(x + w, y + h - radius);
+        this.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+        this.lineTo(x + radius, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - radius);
+        this.lineTo(x, y + radius);
+        this.quadraticCurveTo(x, y, x + radius, y);
+        this.closePath();
+      };
+    }
+
+    // Initialize
+    drawMannequin();
+
+    function downloadPNG() {
+      canvas.toBlob(function(blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mannequin-template.png';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        document.getElementById('status').innerHTML = '<div class="success">✓ PNG downloaded successfully!</div>';
+      }, 'image/png', 1.0);
+    }
+
+    function generateBase64() {
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      const base64 = dataUrl.split(',')[1];
+
+      const output = document.getElementById('base64Output');
+      output.style.display = 'block';
+      output.innerHTML = `
+        <strong>Base64 String (copy this):</strong><br><br>
+        <textarea style="width: 100%; height: 150px; font-family: monospace; font-size: 11px;">${base64}</textarea>
+        <br><br>
+        <strong>Usage in code:</strong><br>
+        <code style="display: block; background: #1f2937; color: #10b981; padding: 10px; border-radius: 4px; margin-top: 10px;">
+const MANNEQUIN_TEMPLATE_BASE64 = '${base64.substring(0, 60)}...'<br>
+export const MANNEQUIN_TEMPLATE = \`data:image/png;base64,\${MANNEQUIN_TEMPLATE_BASE64}\`
+        </code>
+      `;
+
+      document.getElementById('status').innerHTML = '<div class="success">✓ Base64 generated! Copy from below.</div>';
+    }
+  </script>
+</body>
+</html>

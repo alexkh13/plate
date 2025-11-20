@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test AI Analyze Flow</title>
+</head>
+<body>
+    <h1>AI Analyze Flow Test</h1>
+    <input type="file" id="fileInput" accept="image/*" multiple>
+    <button onclick="testFlow()">Test Flow</button>
+    <pre id="output"></pre>
+    
+    <script>
+        function log(msg) {
+            document.getElementById('output').textContent += msg + '\n';
+            console.log(msg);
+        }
+        
+        function testFlow() {
+            const files = document.getElementById('fileInput').files;
+            log('📁 Files selected: ' + files.length);
+            
+            if (files.length === 0) {
+                log('❌ No files selected');
+                return;
+            }
+            
+            // Convert files to data URLs
+            const filePromises = Array.from(files).map(file => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(file);
+                });
+            });
+            
+            Promise.all(filePromises).then(dataUrls => {
+                log('💾 Storing ' + dataUrls.length + ' images in sessionStorage');
+                sessionStorage.setItem('aiAnalyzeImages', JSON.stringify(dataUrls));
+                log('✅ Stored successfully');
+                log('📦 SessionStorage size: ' + sessionStorage.getItem('aiAnalyzeImages').length + ' bytes');
+                
+                // Test retrieval
+                const retrieved = sessionStorage.getItem('aiAnalyzeImages');
+                if (retrieved) {
+                    const parsed = JSON.parse(retrieved);
+                    log('✅ Retrieved ' + parsed.length + ' images from sessionStorage');
+                } else {
+                    log('❌ Failed to retrieve from sessionStorage');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
