@@ -19,7 +19,7 @@ function DataManagementPage() {
 
   // Get data for statistics
   const { data: profiles } = useProfiles()
-  const { data: items } = useFoods()
+  const { data: foods } = useFoods()
   const { data: meals } = useMeals()
   const { data: calendarEntries } = useCalendarEntries()
 
@@ -33,7 +33,7 @@ function DataManagementPage() {
         version: '1.0',
         exportDate: new Date().toISOString(),
         profiles: await db.profiles.find().exec().then(docs => docs.map(d => d.toJSON())),
-        items: await db.items.find().exec().then(docs => docs.map(d => d.toJSON())),
+        foods: await db.foods.find().exec().then(docs => docs.map(d => d.toJSON())),
         meals: await db.meals.find().exec().then(docs => docs.map(d => d.toJSON())),
         calendarEntries: await db.calendar_entries.find().exec().then(docs => docs.map(d => d.toJSON()))
       }
@@ -68,7 +68,7 @@ function DataManagementPage() {
       const data = JSON.parse(text)
 
       // Validate data structure
-      if (!data.version || !data.profiles || !data.items || !data.meals) {
+      if (!data.version || !data.profiles || !data.foods || !data.meals) {
         throw new Error('Invalid backup file format')
       }
 
@@ -83,12 +83,12 @@ function DataManagementPage() {
         }
       }
 
-      // Import items
-      for (const item of data.items) {
+      // Import foods
+      for (const food of data.foods) {
         try {
-          await db.items.upsert(item)
+          await db.foods.upsert(food)
         } catch (error) {
-          console.warn('Failed to import item:', item.id, error)
+          console.warn('Failed to import food:', food.id, error)
         }
       }
 
@@ -164,13 +164,13 @@ This will fix any schema-related errors.`
       const db = await getDatabase()
 
       // Delete all data
-      const allItems = await db.items.find().exec()
-      for (const item of allItems) {
-        await item.remove()
+      const allFoods = await db.foods.find().exec()
+      for (const food of allFoods) {
+        await food.remove()
       }
 
-      const allOutfits = await db.meals.find().exec()
-      for (const meal of allOutfits) {
+      const allMeals = await db.meals.find().exec()
+      for (const meal of allMeals) {
         await meal.remove()
       }
 
@@ -198,8 +198,8 @@ This will fix any schema-related errors.`
 
   // Calculate storage size
   const calculateStorageSize = () => {
-    const itemsSize = items?.reduce((sum, item) => sum + (item.photo?.length || 0), 0) || 0
-    const sizeInMB = (itemsSize / (1024 * 1024)).toFixed(2)
+    const foodsSize = foods?.reduce((sum, food) => sum + (food.photo?.length || 0), 0) || 0
+    const sizeInMB = (foodsSize / (1024 * 1024)).toFixed(2)
     return `~${sizeInMB} MB`
   }
 
@@ -232,9 +232,9 @@ This will fix any schema-related errors.`
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Items</span>
+                  <span className="text-gray-600 dark:text-gray-400">Foods</span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {items?.length || 0}
+                    {foods?.length || 0}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -429,7 +429,7 @@ This will fix any schema-related errors.`
                 </p>
                 <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1 ml-2">
                   <li>All profiles ({profiles?.length || 0})</li>
-                  <li>All items ({items?.length || 0})</li>
+                  <li>All foods ({foods?.length || 0})</li>
                   <li>All meals ({meals?.length || 0})</li>
                   <li>All calendar entries ({calendarEntries?.length || 0})</li>
                   <li>All settings and preferences</li>

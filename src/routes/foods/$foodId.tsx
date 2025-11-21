@@ -8,16 +8,16 @@ import { generateCleanProductImageFromData } from '@/services/ai/gemini'
 import { isGeminiConfigured } from '@/services/ai'
 import { calculateNetCarbs, getCarbBadgeColor, getCarbTextColor, getCarbBorderColor, getCarbBgOpacity } from '@/utils/nutrition'
 
-export const Route = createFileRoute('/foods/$foodId')({ component: ItemDetailPage })
+export const Route = createFileRoute('/foods/$foodId')({ component: FoodDetailPage })
 
-function ItemDetailPage() {
+function FoodDetailPage() {
   const navigate = useNavigate()
   const { foodId } = Route.useParams()
-  const { data: item, isLoading, error } = useFood(foodId)
+  const { data: food, isLoading, error } = useFood(foodId)
   const { data: allMeals } = useMeals()
-  const { data: items, isLoading: itemsLoading } = useFoods()
-  const updateItem = useUpdateFood()
-  const deleteItem = useDeleteFood()
+  const { data: foods, isLoading: foodsLoading } = useFoods()
+  const updateFood = useUpdateFood()
+  const deleteFood = useDeleteFood()
 
   const [isEditing, setIsEditing] = useState(false)
   const [isRegeneratingImage, setIsRegeneratingImage] = useState(false)
@@ -145,83 +145,83 @@ function ItemDetailPage() {
     })
   }
 
-  // Update edit data when item loads
+  // Update edit data when food loads
   useEffect(() => {
-    if (item) {
+    if (food) {
       setEditData({
-        name: item.name || '',
-        category: item.category || '',
-        brand: item.brand || '',
-        tags: item.tags || '',
-        notes: item.notes || '',
+        name: food.name || '',
+        category: food.category || '',
+        brand: food.brand || '',
+        tags: food.tags || '',
+        notes: food.notes || '',
         // Nutrition data
-        calories: item.calories || 0,
-        protein: item.protein || 0,
-        carbs: item.carbs || 0,
-        fat: item.fat || 0,
-        fiber: item.fiber || 0,
-        sugar: item.sugar || 0,
-        sodium: item.sodium || 0,
-        servingSize: item.servingSize || 100,
-        servingSizeUnit: item.servingSizeUnit || 'g',
-        allergens: item.allergens || []
+        calories: food.calories || 0,
+        protein: food.protein || 0,
+        carbs: food.carbs || 0,
+        fat: food.fat || 0,
+        fiber: food.fiber || 0,
+        sugar: food.sugar || 0,
+        sodium: food.sodium || 0,
+        servingSize: food.servingSize || 100,
+        servingSizeUnit: food.servingSizeUnit || 'g',
+        allergens: food.allergens || []
       })
     }
-  }, [item])
+  }, [food])
 
   const handleSaveEdit = async () => {
     try {
-      await updateItem.mutateAsync({
+      await updateFood.mutateAsync({
         id: foodId,
         data: editData
       })
       setIsEditing(false)
     } catch (err) {
-      console.error('Failed to update item:', err)
-      alert('Failed to update item')
+      console.error('Failed to update food:', err)
+      alert('Failed to update food')
     }
   }
 
   const handleCancelEdit = () => {
-    if (item) {
+    if (food) {
       setEditData({
-        name: item.name || '',
-        category: item.category || '',
-        brand: item.brand || '',
-        tags: item.tags || '',
-        notes: item.notes || '',
+        name: food.name || '',
+        category: food.category || '',
+        brand: food.brand || '',
+        tags: food.tags || '',
+        notes: food.notes || '',
         // Nutrition data
-        calories: item.calories || 0,
-        protein: item.protein || 0,
-        carbs: item.carbs || 0,
-        fat: item.fat || 0,
-        fiber: item.fiber || 0,
-        sugar: item.sugar || 0,
-        sodium: item.sodium || 0,
-        servingSize: item.servingSize || 100,
-        servingSizeUnit: item.servingSizeUnit || 'g',
-        allergens: item.allergens || []
+        calories: food.calories || 0,
+        protein: food.protein || 0,
+        carbs: food.carbs || 0,
+        fat: food.fat || 0,
+        fiber: food.fiber || 0,
+        sugar: food.sugar || 0,
+        sodium: food.sodium || 0,
+        servingSize: food.servingSize || 100,
+        servingSizeUnit: food.servingSizeUnit || 'g',
+        allergens: food.allergens || []
       })
     }
     setIsEditing(false)
   }
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to delete this food? This action cannot be undone.')) {
       return
     }
 
     try {
-      await deleteItem.mutateAsync(foodId)
+      await deleteFood.mutateAsync(foodId)
       navigate({ to: '/pantry' })
     } catch (err) {
-      console.error('Failed to delete item:', err)
-      alert('Failed to delete item')
+      console.error('Failed to delete food:', err)
+      alert('Failed to delete food')
     }
   }
 
   const handleRegenerateImage = async () => {
-    if (!item?.photo) {
+    if (!food?.photo) {
       alert('No image to regenerate')
       return
     }
@@ -234,14 +234,14 @@ function ItemDetailPage() {
     setRegenerationProgress('Initializing...')
 
     try {
-      // Try to find the meal that contains this food item to get original image + bounding box
+      // Try to find the meal that contains this food food to get original image + bounding box
       const { getDatabase } = await import('@/db')
       const db = await getDatabase()
 
       setRegenerationProgress('Finding original meal photo...')
       const mealFoods = await db.meal_foods.find({ selector: { foodId } }).exec()
 
-      let imageToRegenerate = item.photo // Default to current photo
+      let imageToRegenerate = food.photo // Default to current photo
 
       if (mealFoods.length > 0) {
         // Use the most recent meal that contains this food
@@ -292,13 +292,13 @@ function ItemDetailPage() {
           console.log(`${message} (${progress}%)`)
         },
         {
-          name: item.name,
-          category: item.category,
+          name: food.name,
+          category: food.category,
         }
       )
 
       setRegenerationProgress('Saving...')
-      await updateItem.mutateAsync({
+      await updateFood.mutateAsync({
         id: foodId,
         data: { photo: newImage }
       })
@@ -334,7 +334,7 @@ function ItemDetailPage() {
         onClick: handleSaveEdit,
       },
     ] : [
-      ...(aiConfigured && item?.photo ? [{
+      ...(aiConfigured && food?.photo ? [{
         icon: RefreshCw,
         label: isRegeneratingImage ? 'Regenerating...' : 'Regenerate Image',
         onClick: handleRegenerateImage,
@@ -342,12 +342,12 @@ function ItemDetailPage() {
       }] : []),
       {
         icon: Edit,
-        label: 'Edit Item',
+        label: 'Edit Food',
         onClick: () => setIsEditing(true),
       },
       {
         icon: Trash2,
-        label: 'Delete Item',
+        label: 'Delete Food',
         onClick: handleDelete,
         variant: 'destructive' as const,
       },
@@ -355,24 +355,24 @@ function ItemDetailPage() {
   })
 
   // We'll use mealCroppedImages which already has the meal data
-  // No need for mealsUsingItem anymore
+  // No need for mealsUsingFood anymore
 
   if (isLoading) {
     return (
       <div className="bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading item...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading food...</p>
         </div>
       </div>
     )
   }
 
-  if (error || !item) {
+  if (error || !food) {
     return (
       <div className="bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 dark:text-red-400">Item not found</p>
+          <p className="text-red-600 dark:text-red-400">Food not found</p>
           <button
             onClick={() => navigate({ to: '/pantry' })}
             className="mt-4 text-blue-600 dark:text-blue-400 hover:underline"
@@ -407,16 +407,16 @@ function ItemDetailPage() {
 
       <div className="max-w-md mx-auto">
         <div className="px-4 py-6 space-y-6">
-          {/* Item Photo Carousel */}
+          {/* Food Photo Carousel */}
           <section className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-800">
             {(() => {
               // Build array of all available images
               const allImages = []
 
               // Add current photo first (if exists)
-              if (item.photo) {
+              if (food.photo) {
                 allImages.push({
-                  src: item.photo,
+                  src: food.photo,
                   label: 'Current Photo',
                   type: 'current'
                 })
@@ -425,7 +425,7 @@ function ItemDetailPage() {
               // Add meal cropped images (skip if it matches the current photo to avoid duplicates)
               mealCroppedImages.forEach(mealImg => {
                 // Skip if this cropped image is the same as the current photo
-                if (item.photo && mealImg.image === item.photo) {
+                if (food.photo && mealImg.image === food.photo) {
                   console.log('⏭️ Skipping duplicate image from meal:', mealImg.mealName)
                   return
                 }
@@ -444,8 +444,8 @@ function ItemDetailPage() {
                     <div className="flex flex-col items-center justify-center gap-4">
                       <Shirt className="w-20 h-20 text-blue-400 dark:text-blue-600" />
                       <div className="text-center">
-                        <p className="text-lg font-semibold text-blue-700 dark:text-blue-400">{item.name}</p>
-                        <p className="text-sm text-blue-600 dark:text-blue-500">{item.category}</p>
+                        <p className="text-lg font-semibold text-blue-700 dark:text-blue-400">{food.name}</p>
+                        <p className="text-sm text-blue-600 dark:text-blue-500">{food.category}</p>
                       </div>
                     </div>
                   </div>
@@ -458,7 +458,7 @@ function ItemDetailPage() {
                 <div className="relative w-full">
                   <img
                     src={currentImage.src}
-                    alt={item.name}
+                    alt={food.name}
                     className="w-full h-96 object-cover"
                   />
 
@@ -500,21 +500,21 @@ function ItemDetailPage() {
 
                   {/* Food Name Overlay */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-                    <p className="text-white font-semibold text-lg">{item.name}</p>
-                    <p className="text-white/90 text-sm">{item.category}</p>
+                    <p className="text-white font-semibold text-lg">{food.name}</p>
+                    <p className="text-white/90 text-sm">{food.category}</p>
                   </div>
                 </div>
               )
             })()}
           </section>
 
-          {/* Item Details */}
+          {/* Food Details */}
           <section className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
             {isEditing ? (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Item Name *
+                    Food Name *
                   </label>
                   <input
                     type="text"
@@ -783,49 +783,49 @@ function ItemDetailPage() {
                     onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
                     rows={4}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Additional notes about this item..."
+                    placeholder="Additional notes about this food..."
                   />
                 </div>
               </div>
             ) : (
               <>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">{item.name}</h2>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">{food.name}</h2>
 
                 <div className="space-y-3">
                   <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800">
                     <span className="text-gray-600 dark:text-gray-400">Category:</span>
-                    <span className="font-medium text-gray-800 dark:text-gray-100">{item.category}</span>
+                    <span className="font-medium text-gray-800 dark:text-gray-100">{food.category}</span>
                   </div>
-                  {item.color && (
+                  {food.color && (
                     <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800">
                       <span className="text-gray-600 dark:text-gray-400">Color:</span>
-                      <span className="font-medium text-gray-800 dark:text-gray-100">{item.color}</span>
+                      <span className="font-medium text-gray-800 dark:text-gray-100">{food.color}</span>
                     </div>
                   )}
-                  {item.size && (
+                  {food.size && (
                     <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800">
                       <span className="text-gray-600 dark:text-gray-400">Size:</span>
-                      <span className="font-medium text-gray-800 dark:text-gray-100">{item.size}</span>
+                      <span className="font-medium text-gray-800 dark:text-gray-100">{food.size}</span>
                     </div>
                   )}
-                  {item.brand && (
+                  {food.brand && (
                     <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800">
                       <span className="text-gray-600 dark:text-gray-400">Brand:</span>
-                      <span className="font-medium text-gray-800 dark:text-gray-100">{item.brand}</span>
+                      <span className="font-medium text-gray-800 dark:text-gray-100">{food.brand}</span>
                     </div>
                   )}
-                  {item.tags && (
+                  {food.tags && (
                     <div className="py-2">
-                      <span className="text-gray-600 dark:text-gray-400">Tags: {item.tags}</span>
+                      <span className="text-gray-600 dark:text-gray-400">Tags: {food.tags}</span>
                     </div>
                   )}
                 </div>
 
-                {item.notes && (
+                {food.notes && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                     <h3 className="text-gray-600 dark:text-gray-400 mb-2">Notes:</h3>
                     <div className="min-h-[60px] bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-gray-700 dark:text-gray-300 text-sm">
-                      {item.notes}
+                      {food.notes}
                     </div>
                   </div>
                 )}
@@ -843,19 +843,19 @@ function ItemDetailPage() {
                 <div className="pb-3 border-b-2 border-gray-900 dark:border-gray-100">
                   <div className="text-sm text-gray-600 dark:text-gray-400">Serving Size</div>
                   <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    {item.servingSize} {item.servingSizeUnit}
+                    {food.servingSize} {food.servingSizeUnit}
                   </div>
                 </div>
 
                 {/* NET CARBS - HERO */}
-                <div className={`py-3 px-4 rounded-lg border-2 ${getCarbBorderColor(calculateNetCarbs(item.carbs, item.fiber))} ${getCarbBgOpacity(calculateNetCarbs(item.carbs, item.fiber))}`}>
+                <div className={`py-3 px-4 rounded-lg border-2 ${getCarbBorderColor(calculateNetCarbs(food.carbs, food.fiber))} ${getCarbBgOpacity(calculateNetCarbs(food.carbs, food.fiber))}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl">🥦</span>
                       <span className="text-xs uppercase tracking-wide text-gray-600 dark:text-gray-400 font-medium">Net Carbs</span>
                     </div>
-                    <span className={`text-3xl font-bold ${getCarbTextColor(calculateNetCarbs(item.carbs, item.fiber))}`}>
-                      {calculateNetCarbs(item.carbs, item.fiber)}g
+                    <span className={`text-3xl font-bold ${getCarbTextColor(calculateNetCarbs(food.carbs, food.fiber))}`}>
+                      {calculateNetCarbs(food.carbs, food.fiber)}g
                     </span>
                   </div>
                 </div>
@@ -868,16 +868,16 @@ function ItemDetailPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-gray-700 dark:text-gray-300">Total Carbs</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{item.carbs}g</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{food.carbs}g</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-700 dark:text-gray-300">Fiber</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{item.fiber || 0}g</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{food.fiber || 0}g</span>
                     </div>
-                    {item.sugar !== undefined && item.sugar > 0 && (
+                    {food.sugar !== undefined && food.sugar > 0 && (
                       <div className="flex justify-between">
                         <span className="text-gray-700 dark:text-gray-300">Sugar</span>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">{item.sugar}g</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{food.sugar}g</span>
                       </div>
                     )}
                   </div>
@@ -891,11 +891,11 @@ function ItemDetailPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="font-semibold text-gray-800 dark:text-gray-200">Protein</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{item.protein}g</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{food.protein}g</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="font-semibold text-gray-800 dark:text-gray-200">Fat</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{item.fat}g</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{food.fat}g</span>
                     </div>
                   </div>
                 </div>
@@ -908,23 +908,23 @@ function ItemDetailPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-gray-700 dark:text-gray-300">Calories</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{item.calories}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{food.calories}</span>
                     </div>
-                    {item.sodium !== undefined && item.sodium > 0 && (
+                    {food.sodium !== undefined && food.sodium > 0 && (
                       <div className="flex justify-between">
                         <span className="text-gray-700 dark:text-gray-300">Sodium</span>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">{item.sodium}mg</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{food.sodium}mg</span>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Allergens */}
-                {item.allergens && item.allergens.length > 0 && (
+                {food.allergens && food.allergens.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                     <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Allergens:</h3>
                     <div className="flex flex-wrap gap-2">
-                      {item.allergens.map((allergen, index) => (
+                      {food.allergens.map((allergen, index) => (
                         <span
                           key={index}
                           className="px-3 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-sm font-medium"

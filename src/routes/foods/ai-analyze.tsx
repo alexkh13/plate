@@ -13,13 +13,13 @@ import {
 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useProfile } from '@/hooks/useProfile'
-import { extractFoodsFromImage, isGeminiConfigured, type AIGeneratedItem } from '@/services/ai'
+import { extractFoodsFromImage, isGeminiConfigured, type AIGeneratedFood } from '@/services/ai'
 import { useCreateFood } from '@/hooks/useData'
 import { getTempImages, clearTempImages } from '@/utils/tempImageStorage'
 
 export const Route = createFileRoute('/foods/ai-analyze')({ component: AIAnalyzePage })
 
-interface ItemFormData {
+interface FoodFormData {
   id?: string
   name: string
   category: string
@@ -65,10 +65,10 @@ interface ItemFormData {
 function AIAnalyzePage() {
   const navigate = useNavigate()
   const { activeProfile } = useProfile()
-  const createItem = useCreateFood()
+  const createFood = useCreateFood()
 
-  const [analyzedItems, setAnalyzedItems] = useState<ItemFormData[]>([])
-  const [currentItemIndex, setCurrentItemIndex] = useState(0)
+  const [analyzedFoods, setAnalyzedFoods] = useState<FoodFormData[]>([])
+  const [currentFoodIndex, setCurrentFoodIndex] = useState(0)
   const [showSuccess, setShowSuccess] = useState(false)
   const [hasGeminiKey, setHasGeminiKey] = useState(false)
   const [showGeneratedImage, setShowGeneratedImage] = useState(true) // Toggle between cropped and generated
@@ -151,9 +151,9 @@ function AIAnalyzePage() {
   // Process all images in background
   const processImagesInBackground = async (images: string[]) => {
     if (!(await isGeminiConfigured())) {
-      setAnalyzedItems(items =>
-        items.map(item => ({
-          ...item,
+      setAnalyzedFoods(foods =>
+        foods.map(food => ({
+          ...food,
           isProcessing: false,
           processingMessage: 'API key required',
           name: 'Configuration needed',
@@ -164,23 +164,23 @@ function AIAnalyzePage() {
 
     const { extractMultipleFoodsMetadata } = await import('@/services/ai/gemini')
 
-    let totalItemsCreated = 0
+    let totalFoodsCreated = 0
 
-    // Process each image and show items immediately after each one
+    // Process each image and show foods immediately after each one
     for (let i = 0; i < images.length; i++) {
       try {
         console.log(`📸 Processing image ${i + 1}/${images.length}`)
 
         // Update placeholder
-        setAnalyzedItems(prevItems => {
-          const newItems = [...prevItems]
-          if (i < newItems.length) {
-            newItems[i] = {
-              ...newItems[i],
+        setAnalyzedFoods(prevFoods => {
+          const newFoods = [...prevFoods]
+          if (i < newFoods.length) {
+            newFoods[i] = {
+              ...newFoods[i],
               processingMessage: `Analyzing image ${i + 1}/${images.length}...`,
             }
           }
-          return newItems
+          return newFoods
         })
 
         // Convert data URL to File
@@ -190,22 +190,22 @@ function AIAnalyzePage() {
 
         // Extract metadata ONLY
         const extractedMetadata = await extractMultipleFoodsMetadata(file, (message, progress) => {
-          setAnalyzedItems(prevItems => {
-            const newItems = [...prevItems]
-            if (i < newItems.length) {
-              newItems[i] = {
-                ...newItems[i],
+          setAnalyzedFoods(prevFoods => {
+            const newFoods = [...prevFoods]
+            if (i < newFoods.length) {
+              newFoods[i] = {
+                ...newFoods[i],
                 processingMessage: message,
               }
             }
-            return newItems
+            return newFoods
           })
         })
 
         console.log(`✅ Detected ${extractedMetadata.length} foods in image ${i + 1}`)
 
-        // Crop images and create items immediately for this image
-        const newItemsForThisImage: ItemFormData[] = []
+        // Crop images and create foods immediately for this image
+        const newFoodsForThisImage: FoodFormData[] = []
 
         for (const metadata of extractedMetadata) {
           let croppedImage = images[i]
@@ -229,7 +229,7 @@ function AIAnalyzePage() {
           const confidence = metadata.confidence || 0.9
           console.log(`   Confidence: ${(confidence * 100).toFixed(0)}%`)
 
-          newItemsForThisImage.push({
+          newFoodsForThisImage.push({
             name: metadata.name,
             category: metadata.category,
             // Nutrition data
@@ -262,21 +262,21 @@ function AIAnalyzePage() {
           })
         }
 
-        // Replace the placeholder with detected items IMMEDIATELY
-        setAnalyzedItems(prevItems => {
-          const result = [...prevItems]
-          result.splice(i, 1, ...newItemsForThisImage)
+        // Replace the placeholder with detected foods IMMEDIATELY
+        setAnalyzedFoods(prevFoods => {
+          const result = [...prevFoods]
+          result.splice(i, 1, ...newFoodsForThisImage)
           return result
         })
 
-        console.log(`📦 Added ${newItemsForThisImage.length} items from image ${i + 1}`)
+        console.log(`📦 Added ${newFoodsForThisImage.length} foods from image ${i + 1}`)
 
-        totalItemsCreated += newItemsForThisImage.length
+        totalFoodsCreated += newFoodsForThisImage.length
       } catch (error) {
         console.error(`Failed to process image ${i}:`, error)
         // Mark placeholder as error
-        setAnalyzedItems(prevItems => {
-          const result = [...prevItems]
+        setAnalyzedFoods(prevFoods => {
+          const result = [...prevFoods]
           if (i < result.length) {
             result[i] = {
               ...result[i],
@@ -290,102 +290,99 @@ function AIAnalyzePage() {
       }
     }
 
-    console.log(`🎯 Total items created: ${totalItemsCreated}`)
+    console.log(`🎯 Total foods created: ${totalFoodsCreated}`)
   }
 
-  // Generate clean product image for a specific item by position
-  const generateImageForItemByPosition = async (
+  // Generate clean product image for a specific food by position
+  const generateImageForFoodByPosition = async (
     position: number,
     croppedImageData: string,
-    itemName: string
+    foodName: string
   ) => {
     try {
       const { generateCleanProductImageFromData } = await import('@/services/ai/gemini')
 
-      const item = analyzedItems[position]
-      console.log(`🎨 Starting image generation for item ${position + 1}: ${itemName}`)
+      const food = analyzedFoods[position]
+      console.log(`🎨 Starting image generation for food ${position + 1}: ${foodName}`)
 
       // Update status
-      setAnalyzedItems(prevItems => {
-        if (position >= prevItems.length) {
-          console.warn(`⚠️ Item position ${position} out of bounds (length: ${prevItems.length})`)
-          return prevItems
+      setAnalyzedFoods(prevFoods => {
+        if (position >= prevFoods.length) {
+          console.warn(`⚠️ Food position ${position} out of bounds (length: ${prevFoods.length})`)
+          return prevFoods
         }
-        const newItems = [...prevItems]
-        newItems[position] = {
-          ...newItems[position],
+        const newFoods = [...prevFoods]
+        newFoods[position] = {
+          ...newFoods[position],
           processingMessage: 'Generating product image...',
         }
-        return newItems
+        return newFoods
       })
 
       // Pass metadata to help AI understand what to generate
-      const itemMetadata = {
-        name: item.name,
-        category: item.category,
-        color: item.color,
-        material: item.metadata?.material,
-        pattern: item.metadata?.pattern,
+      const foodMetadata = {
+        name: food.name,
+        category: food.category,
       }
 
       const generatedImage = await generateCleanProductImageFromData(
         croppedImageData,
         (message, progress) => {
-          setAnalyzedItems(prevItems => {
-            if (position >= prevItems.length) return prevItems
-            const newItems = [...prevItems]
-            newItems[position] = {
-              ...newItems[position],
+          setAnalyzedFoods(prevFoods => {
+            if (position >= prevFoods.length) return prevFoods
+            const newFoods = [...prevFoods]
+            newFoods[position] = {
+              ...newFoods[position],
               processingMessage: message,
             }
-            return newItems
+            return newFoods
           })
         },
-        itemMetadata
+        foodMetadata
       )
 
-      console.log(`✅ Image generated for item ${position + 1}: ${itemName}`)
+      console.log(`✅ Image generated for food ${position + 1}: ${foodName}`)
 
       // Store generated image separately and update display
-      setAnalyzedItems(prevItems => {
-        if (position >= prevItems.length) {
-          console.warn(`⚠️ Item position ${position} out of bounds when updating generated image`)
-          return prevItems
+      setAnalyzedFoods(prevFoods => {
+        if (position >= prevFoods.length) {
+          console.warn(`⚠️ Food position ${position} out of bounds when updating generated image`)
+          return prevFoods
         }
-        const newItems = [...prevItems]
-        newItems[position] = {
-          ...newItems[position],
+        const newFoods = [...prevFoods]
+        newFoods[position] = {
+          ...newFoods[position],
           generatedImageData: generatedImage, // Store generated version
           imageData: generatedImage, // Show generated by default
           isProcessing: false,
           processingMessage: '',
           needsAIGeneration: false, // Hide button after generation
         }
-        return newItems
+        return newFoods
       })
     } catch (error) {
-      console.error(`Failed to generate image for item ${position + 1}:`, error)
+      console.error(`Failed to generate image for food ${position + 1}:`, error)
       // Keep the cropped image, just mark as done processing
-      setAnalyzedItems(prevItems => {
-        if (position >= prevItems.length) return prevItems
-        const newItems = [...prevItems]
-        newItems[position] = {
-          ...newItems[position],
+      setAnalyzedFoods(prevFoods => {
+        if (position >= prevFoods.length) return prevFoods
+        const newFoods = [...prevFoods]
+        newFoods[position] = {
+          ...newFoods[position],
           isProcessing: false,
           processingMessage: '',
         }
-        return newItems
+        return newFoods
       })
     }
   }
 
-  // Load images from IndexedDB on mount and immediately create placeholder items
+  // Load images from IndexedDB on mount and immediately create placeholder foods
   useEffect(() => {
     const loadImages = async () => {
       const images = await getTempImages()
       console.log('🔍 Checking for stored images:', images.length > 0 ? 'Found' : 'Not found')
       console.log('🔍 Processing ref:', processingRef.current)
-      console.log('🔍 Analyzed items count:', analyzedItems.length)
+      console.log('🔍 Analyzed foods count:', analyzedFoods.length)
 
       if (images.length > 0 && !processingRef.current) {
         processingRef.current = true
@@ -394,8 +391,8 @@ function AIAnalyzePage() {
         // Clear temp storage after loading
         await clearTempImages()
 
-        // Create placeholder items immediately - this triggers re-render to show form
-        const placeholderItems: ItemFormData[] = images.map((img, index) => ({
+        // Create placeholder foods immediately - this triggers re-render to show form
+        const placeholderFoods: FoodFormData[] = images.map((img, index) => ({
           name: `Analyzing...`,
           category: '',
           // Placeholder nutrition data
@@ -418,33 +415,33 @@ function AIAnalyzePage() {
           processingMessage: 'Starting analysis...',
         }))
 
-        console.log('✨ Created placeholder items:', placeholderItems.length)
-        setAnalyzedItems(placeholderItems)
+        console.log('✨ Created placeholder foods:', placeholderFoods.length)
+        setAnalyzedFoods(placeholderFoods)
 
         // Start processing all images in background
         processImagesInBackground(images)
-      } else if (images.length === 0 && analyzedItems.length === 0 && !processingRef.current) {
-        console.log('⚠️ No images found and no items, redirecting to pantry')
-        // No images found and no items created yet, redirect back to pantry
+      } else if (images.length === 0 && analyzedFoods.length === 0 && !processingRef.current) {
+        console.log('⚠️ No images found and no foods, redirecting to pantry')
+        // No images found and no foods created yet, redirect back to pantry
         navigate({ to: '/pantry' })
       } else {
-        console.log('ℹ️ Skipping effect - already processing or items exist')
+        console.log('ℹ️ Skipping effect - already processing or foods exist')
       }
     }
 
     loadImages()
   }, [navigate])
 
-  const currentItem = analyzedItems[currentItemIndex]
+  const currentFood = analyzedFoods[currentFoodIndex]
 
-  const updateCurrentItem = (updates: Partial<ItemFormData>) => {
-    setAnalyzedItems(items =>
-      items.map((item, i) => (i === currentItemIndex ? { ...item, ...updates } : item))
+  const updateCurrentFood = (updates: Partial<FoodFormData>) => {
+    setAnalyzedFoods(foods =>
+      foods.map((food, i) => (i === currentFoodIndex ? { ...food, ...updates } : food))
     )
   }
 
-  const handleSave = async () => {
-    if (!currentItem.name?.trim() || !currentItem.category?.trim()) {
+  const handleSaveFood = async () => {
+    if (!currentFood.name?.trim() || !currentFood.category?.trim()) {
       alert('Please fill in the required fields: Name and Category')
       return
     }
@@ -455,13 +452,13 @@ function AIAnalyzePage() {
     }
 
     try {
-      const savedItem = await createItem.mutateAsync({
-        name: currentItem.name.trim(),
-        category: currentItem.category.trim(),
-        photo: currentItem.imageData || '',
-        brand: (currentItem.brand || '').toString().trim(),
-        tags: (currentItem.tags || '').toString().trim(),
-        notes: (currentItem.notes || '').toString().trim(),
+      const savedFood = await createFood.mutateAsync({
+        name: currentFood.name.trim(),
+        category: currentFood.category.trim(),
+        photo: currentFood.imageData || '',
+        brand: (currentFood.brand || '').toString().trim(),
+        tags: (currentFood.tags || '').toString().trim(),
+        notes: (currentFood.notes || '').toString().trim(),
         // Required nutrition fields - using placeholder values
         calories: 0,
         protein: 0,
@@ -473,120 +470,120 @@ function AIAnalyzePage() {
         profileId: activeProfile.id,
       })
 
-      // Mark current item as saved
-      setAnalyzedItems(items =>
-        items.map((item, i) =>
-          i === currentItemIndex
-            ? { ...item, id: savedItem.id, saved: true }
-            : item
+      // Mark current food as saved
+      setAnalyzedFoods(foods =>
+        foods.map((food, i) =>
+          i === currentFoodIndex
+            ? { ...food, id: savedFood.id, saved: true }
+            : food
         )
       )
 
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 2000)
 
-      // Check if all items are saved
-      const allSaved = analyzedItems.every((item, i) =>
-        i === currentItemIndex || item.saved
+      // Check if all foods are saved
+      const allSaved = analyzedFoods.every((food, i) =>
+        i === currentFoodIndex || food.saved
       )
 
       if (allSaved) {
-        // All items saved, show success and allow user to navigate away
+        // All foods saved, show success and allow user to navigate away
         setTimeout(() => {
-          if (confirm('All items saved! Return to pantry?')) {
+          if (confirm('All foods saved! Return to pantry?')) {
             navigate({ to: '/pantry' })
           }
         }, 1500)
       }
     } catch (err) {
-      console.error('Failed to save item:', err)
-      alert('Failed to save item')
+      console.error('Failed to save food:', err)
+      alert('Failed to save food')
     }
   }
 
-  const handleDiscard = () => {
-    // Remove current item from the list
-    const newItems = analyzedItems.filter((_, i) => i !== currentItemIndex)
+  const handleDiscardFood = () => {
+    // Remove current food from the list
+    const newFoods = analyzedFoods.filter((_, i) => i !== currentFoodIndex)
 
-    if (newItems.length === 0) {
-      // No more items, go back to pantry
+    if (newFoods.length === 0) {
+      // No more foods, go back to pantry
       navigate({ to: '/pantry' })
       return
     }
 
-    setAnalyzedItems(newItems)
+    setAnalyzedFoods(newFoods)
 
     // Adjust current index if needed
-    if (currentItemIndex >= newItems.length) {
-      setCurrentItemIndex(newItems.length - 1)
+    if (currentFoodIndex >= newFoods.length) {
+      setCurrentFoodIndex(newFoods.length - 1)
     }
   }
 
-  const handleNavigateToItem = (index: number) => {
-    setCurrentItemIndex(index)
-    // Reset to show generated image by default when switching items
+  const handleNavigateToFood = (index: number) => {
+    setCurrentFoodIndex(index)
+    // Reset to show generated image by default when switching foods
     setShowGeneratedImage(true)
   }
 
   const handleGenerateAIImage = async () => {
-    const currentItem = analyzedItems[currentItemIndex]
-    if (!currentItem.imageData || !currentItem.needsAIGeneration) return
+    const currentFood = analyzedFoods[currentFoodIndex]
+    if (!currentFood.imageData || !currentFood.needsAIGeneration) return
 
-    console.log(`🎨 User triggered AI generation for item ${currentItemIndex + 1}: ${currentItem.name}`)
+    console.log(`🎨 User triggered AI generation for food ${currentFoodIndex + 1}: ${currentFood.name}`)
 
     // Update to show it's processing and hide the button
-    setAnalyzedItems(prevItems => {
-      const newItems = [...prevItems]
-      newItems[currentItemIndex] = {
-        ...newItems[currentItemIndex],
+    setAnalyzedFoods(prevFoods => {
+      const newFoods = [...prevFoods]
+      newFoods[currentFoodIndex] = {
+        ...newFoods[currentFoodIndex],
         isProcessing: true,
         needsAIGeneration: false,
         processingMessage: 'Generating product image...',
       }
-      return newItems
+      return newFoods
     })
 
     // Start generation using the cropped image
-    await generateImageForItemByPosition(
-      currentItemIndex,
-      currentItem.croppedImageData || currentItem.imageData,
-      currentItem.name
+    await generateImageForFoodByPosition(
+      currentFoodIndex,
+      currentFood.croppedImageData || currentFood.imageData,
+      currentFood.name
     )
   }
 
   const handleReExtractMetadata = async () => {
-    const currentItem = analyzedItems[currentItemIndex]
-    if (!currentItem.originalImageData || currentItem.originalImageIndex === undefined) {
+    const currentFood = analyzedFoods[currentFoodIndex]
+    if (!currentFood.originalImageData || currentFood.originalImageIndex === undefined) {
       console.error('No original image data available for re-extraction')
       return
     }
 
-    const originalImageIndex = currentItem.originalImageIndex
-    const originalImageData = currentItem.originalImageData
+    const originalImageIndex = currentFood.originalImageIndex
+    const originalImageData = currentFood.originalImageData
 
     console.log(`🔄 Re-extracting metadata for original image ${originalImageIndex + 1}`)
 
-    // Find ALL items that came from this original image
-    const itemsFromSameImage = analyzedItems.filter(
-      item => item.originalImageIndex === originalImageIndex
+    // Find ALL foods that came from this original image
+    const foodsFromSameImage = analyzedFoods.filter(
+      food => food.originalImageIndex === originalImageIndex
     )
-    const itemIndices = analyzedItems
-      .map((item, idx) => (item.originalImageIndex === originalImageIndex ? idx : -1))
+    const foodIndices = analyzedFoods
+      .map((food, idx) => (food.originalImageIndex === originalImageIndex ? idx : -1))
       .filter(idx => idx !== -1)
 
-    console.log(`📦 Found ${itemsFromSameImage.length} items from this original image`)
+    console.log(`📦 Found ${foodsFromSameImage.length} foods from this original image`)
 
-    // Mark all related items as processing
-    setAnalyzedItems(prevItems => {
-      const newItems = [...prevItems]
-      itemIndices.forEach(idx => {
-        newItems[idx] = {
-          ...newItems[idx],
+    // Mark all related foods as processing
+    setAnalyzedFoods(prevFoods => {
+      const newFoods = [...prevFoods]
+      foodIndices.forEach(idx => {
+        newFoods[idx] = {
+          ...newFoods[idx],
           isProcessing: true,
           processingMessage: 'Re-analyzing original image...',
         }
       })
-      return newItems
+      return newFoods
     })
 
     try {
@@ -602,8 +599,8 @@ function AIAnalyzePage() {
 
       console.log(`✅ Extracted ${extractedMetadata.length} foods from re-analysis`)
 
-      // Create new items from extracted metadata
-      const newItemsForThisImage: ItemFormData[] = []
+      // Create new foods from extracted metadata
+      const newFoodsForThisImage: FoodFormData[] = []
 
       for (const metadata of extractedMetadata) {
         let croppedImage = originalImageData
@@ -615,7 +612,7 @@ function AIAnalyzePage() {
           }
         }
 
-        newItemsForThisImage.push({
+        newFoodsForThisImage.push({
           name: metadata.name,
           category: metadata.category,
           // Nutrition data
@@ -646,62 +643,62 @@ function AIAnalyzePage() {
         })
       }
 
-      // Replace old items with new items
-      setAnalyzedItems(prevItems => {
-        // Remove all items from the same original image
-        const filteredItems = prevItems.filter(
-          item => item.originalImageIndex !== originalImageIndex
+      // Replace old foods with new foods
+      setAnalyzedFoods(prevFoods => {
+        // Remove all foods from the same original image
+        const filteredFoods = prevFoods.filter(
+          food => food.originalImageIndex !== originalImageIndex
         )
 
-        // Find where to insert new items (at the position of the first old item)
-        const firstOldItemIndex = itemIndices[0]
+        // Find where to insert new foods (at the position of the first old food)
+        const firstOldFoodIndex = foodIndices[0]
 
-        // Insert new items at that position
+        // Insert new foods at that position
         const result = [
-          ...filteredItems.slice(0, firstOldItemIndex),
-          ...newItemsForThisImage,
-          ...filteredItems.slice(firstOldItemIndex),
+          ...filteredFoods.slice(0, firstOldFoodIndex),
+          ...newFoodsForThisImage,
+          ...filteredFoods.slice(firstOldFoodIndex),
         ]
 
         return result
       })
 
-      // Adjust currentItemIndex to the first new item
-      setCurrentItemIndex(itemIndices[0])
+      // Adjust currentFoodIndex to the first new food
+      setCurrentFoodIndex(foodIndices[0])
 
       console.log('✅ Metadata re-extracted successfully')
     } catch (error) {
       console.error('Failed to re-extract metadata:', error)
       // Remove processing state on error
-      setAnalyzedItems(prevItems => {
-        const newItems = [...prevItems]
-        itemIndices.forEach(idx => {
-          if (idx < newItems.length) {
-            newItems[idx] = {
-              ...newItems[idx],
+      setAnalyzedFoods(prevFoods => {
+        const newFoods = [...prevFoods]
+        foodIndices.forEach(idx => {
+          if (idx < newFoods.length) {
+            newFoods[idx] = {
+              ...newFoods[idx],
               isProcessing: false,
               processingMessage: '',
             }
           }
         })
-        return newItems
+        return newFoods
       })
     }
   }
 
   const handleToggleImageView = () => {
-    const currentItem = analyzedItems[currentItemIndex]
-    if (!currentItem.croppedImageData || !currentItem.generatedImageData) return
+    const currentFood = analyzedFoods[currentFoodIndex]
+    if (!currentFood.croppedImageData || !currentFood.generatedImageData) return
 
     const newShowGenerated = !showGeneratedImage
 
-    setAnalyzedItems(prevItems => {
-      const newItems = [...prevItems]
-      newItems[currentItemIndex] = {
-        ...newItems[currentItemIndex],
-        imageData: newShowGenerated ? currentItem.generatedImageData! : currentItem.croppedImageData!,
+    setAnalyzedFoods(prevFoods => {
+      const newFoods = [...prevFoods]
+      newFoods[currentFoodIndex] = {
+        ...newFoods[currentFoodIndex],
+        imageData: newShowGenerated ? currentFood.generatedImageData! : currentFood.croppedImageData!,
       }
-      return newItems
+      return newFoods
     })
 
     setShowGeneratedImage(newShowGenerated)
@@ -709,17 +706,17 @@ function AIAnalyzePage() {
 
   // Bounding box editing functions
   const handleStartEditBoundingBox = () => {
-    const currentItem = analyzedItems[currentItemIndex]
-    if (!currentItem.originalImageData || !currentItem.metadata?.boundingBox) return
+    const currentFood = analyzedFoods[currentFoodIndex]
+    if (!currentFood.originalImageData || !currentFood.metadata?.boundingBox) return
 
     // Load original image to get dimensions
     const img = new Image()
     img.onload = () => {
       setImageDimensions({ width: img.width, height: img.height })
-      setEditedBoundingBox({ ...currentItem.metadata.boundingBox })
+      setEditedBoundingBox({ ...currentFood.metadata.boundingBox })
       setEditingBoundingBox(true)
     }
-    img.src = currentItem.originalImageData
+    img.src = currentFood.originalImageData
   }
 
   const handleCancelEditBoundingBox = () => {
@@ -730,22 +727,22 @@ function AIAnalyzePage() {
 
   const handleSaveBoundingBox = async () => {
     if (!editedBoundingBox) return
-    const currentItem = analyzedItems[currentItemIndex]
-    if (!currentItem.originalImageData) return
+    const currentFood = analyzedFoods[currentFoodIndex]
+    if (!currentFood.originalImageData) return
 
     try {
       console.log('💾 Saving new bounding box:', editedBoundingBox)
 
       // Recrop with new bounding box
-      const newCroppedImage = await cropImage(currentItem.originalImageData, editedBoundingBox)
+      const newCroppedImage = await cropImage(currentFood.originalImageData, editedBoundingBox)
 
-      // Update item with new bounding box and cropped image
-      setAnalyzedItems(prevItems => {
-        const newItems = [...prevItems]
-        newItems[currentItemIndex] = {
-          ...newItems[currentItemIndex],
+      // Update food with new bounding box and cropped image
+      setAnalyzedFoods(prevFoods => {
+        const newFoods = [...prevFoods]
+        newFoods[currentFoodIndex] = {
+          ...newFoods[currentFoodIndex],
           metadata: {
-            ...newItems[currentItemIndex].metadata,
+            ...newFoods[currentFoodIndex].metadata,
             boundingBox: editedBoundingBox,
           },
           croppedImageData: newCroppedImage,
@@ -753,7 +750,7 @@ function AIAnalyzePage() {
           generatedImageData: undefined, // Clear generated image as crop changed
           needsAIGeneration: true,
         }
-        return newItems
+        return newFoods
       })
 
       setEditingBoundingBox(false)
@@ -1089,8 +1086,8 @@ function AIAnalyzePage() {
     setDragStart(null)
   }
 
-  // If no items yet, show loading or redirect
-  if (analyzedItems.length === 0) {
+  // If no foods yet, show loading or redirect
+  if (analyzedFoods.length === 0) {
     return (
       <div className="bg-gray-50 dark:bg-gray-950 pb-20 flex items-center justify-center">
         <div className="text-center">
@@ -1101,7 +1098,7 @@ function AIAnalyzePage() {
     )
   }
 
-  // Show item form view after analysis
+  // Show food form view after analysis
   return (
     <div className="bg-gray-50 dark:bg-gray-950 pb-20">
       <div className="max-w-md mx-auto">
@@ -1110,9 +1107,9 @@ function AIAnalyzePage() {
           <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => {
-                const unsavedCount = analyzedItems.filter(i => !i.saved).length
+                const unsavedCount = analyzedFoods.filter(i => !i.saved).length
                 if (unsavedCount > 0) {
-                  if (confirm(`${unsavedCount} unsaved item(s). Are you sure you want to leave?`)) {
+                  if (confirm(`${unsavedCount} unsaved food(s). Are you sure you want to leave?`)) {
                     navigate({ to: '/pantry' })
                   }
                 } else {
@@ -1122,7 +1119,7 @@ function AIAnalyzePage() {
               className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-medium"
             >
               <ChevronLeft className="w-5 h-5" />
-              Review Items
+              Review Foods
             </button>
             <button
               onClick={() => navigate({ to: '/pantry' })}
@@ -1136,41 +1133,41 @@ function AIAnalyzePage() {
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div
               className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all"
-              style={{ width: `${((analyzedItems.filter(i => i.saved).length) / analyzedItems.length) * 100}%` }}
+              style={{ width: `${((analyzedFoods.filter(i => i.saved).length) / analyzedFoods.length) * 100}%` }}
             />
           </div>
 
           {/* Save/Discard Buttons */}
           <div className="flex gap-2 mt-3">
             <button
-              onClick={handleDiscard}
+              onClick={handleDiscardFood}
               className="px-4 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg font-medium hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center gap-2 border border-red-200 dark:border-red-800"
-              disabled={createItem.isPending}
+              disabled={createFood.isPending}
             >
               <Trash2 className="w-4 h-4" />
               Discard
             </button>
             <button
-              onClick={handleSave}
-              disabled={createItem.isPending || currentItem.isProcessing}
+              onClick={handleSaveFood}
+              disabled={createFood.isPending || currentFood.isProcessing}
               className="flex-1 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {createItem.isPending
+              {createFood.isPending
                 ? 'Saving...'
-                : currentItem.isProcessing
+                : currentFood.isProcessing
                 ? 'Processing...'
                 : showSuccess
                 ? '✓ Saved!'
-                : 'Save Item'}
+                : 'Save Food'}
             </button>
           </div>
 
-          {currentItem.aiGenerated && (
+          {currentFood.aiGenerated && (
             <div className="mt-2 flex items-center gap-2 text-xs text-purple-600 dark:text-purple-400">
               <Sparkles className="w-3 h-3" />
-              {currentItem.isProcessing
+              {currentFood.isProcessing
                 ? 'AI is generating product image...'
-                : currentItem.needsAIGeneration
+                : currentFood.needsAIGeneration
                 ? 'Click the button to generate a clean product image'
                 : 'AI-generated • Review and edit before saving'}
             </div>
@@ -1178,44 +1175,44 @@ function AIAnalyzePage() {
         </div>
 
         <div className="px-4 py-6 space-y-6">
-          {/* Item Thumbnails Navigation */}
+          {/* Food Thumbnails Navigation */}
           <section className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm border border-gray-200 dark:border-gray-800">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              Items ({analyzedItems.filter(i => i.saved).length}/{analyzedItems.length} saved)
+              Foods ({analyzedFoods.filter(i => i.saved).length}/{analyzedFoods.length} saved)
             </h3>
             <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
-              {analyzedItems.map((item, index) => (
+              {analyzedFoods.map((food, index) => (
                 <button
                   key={index}
-                  onClick={() => handleNavigateToItem(index)}
+                  onClick={() => handleNavigateToFood(index)}
                   className={`relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                    index === currentItemIndex
+                    index === currentFoodIndex
                       ? 'border-purple-500 ring-2 ring-purple-200 dark:ring-purple-800'
                       : 'border-gray-200 dark:border-gray-700 hover:border-purple-300'
                   }`}
                 >
                   <img
-                    src={item.imageData}
-                    alt={item.name}
+                    src={food.imageData}
+                    alt={food.name}
                     className="w-full h-full object-cover"
                   />
 
                   {/* Processing spinner overlay */}
-                  {item.isProcessing && (
+                  {food.isProcessing && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                       <Loader2 className="w-5 h-5 animate-spin text-white" />
                     </div>
                   )}
 
                   {/* Saved checkmark */}
-                  {item.saved && (
+                  {food.saved && (
                     <div className="absolute inset-0 bg-green-500/90 flex items-center justify-center">
                       <Check className="w-6 h-6 text-white" />
                     </div>
                   )}
 
                   {/* AI Generation Available Badge */}
-                  {item.needsAIGeneration && !item.isProcessing && !item.saved && (
+                  {food.needsAIGeneration && !food.isProcessing && !food.saved && (
                     <div className="absolute top-1 right-1">
                       <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-full p-1">
                         <Sparkles className="w-3 h-3 text-white" />
@@ -1224,16 +1221,16 @@ function AIAnalyzePage() {
                   )}
 
                   {/* Low Confidence Warning Badge */}
-                  {item.confidence && item.confidence < 0.75 && !item.saved && (
+                  {food.confidence && food.confidence < 0.75 && !food.saved && (
                     <div className="absolute top-1 left-1">
                       <div className="bg-yellow-500 rounded px-1 py-0.5 text-[10px] font-bold text-white shadow-sm">
-                        {Math.round(item.confidence * 100)}%
+                        {Math.round(food.confidence * 100)}%
                       </div>
                     </div>
                   )}
 
                   {/* Bounding Box Adjusted Badge */}
-                  {item.boundingBoxAdjusted && !item.saved && (
+                  {food.boundingBoxAdjusted && !food.saved && (
                     <div className="absolute bottom-1 left-1">
                       <div className="bg-blue-500 rounded-full p-0.5">
                         <RefreshCw className="w-2.5 h-2.5 text-white" />
@@ -1241,8 +1238,8 @@ function AIAnalyzePage() {
                     </div>
                   )}
 
-                  {/* Current item indicator */}
-                  {index === currentItemIndex && (
+                  {/* Current food indicator */}
+                  {index === currentFoodIndex && (
                     <div className="absolute bottom-0 left-0 right-0 h-1 bg-purple-500" />
                   )}
                 </button>
@@ -1250,9 +1247,9 @@ function AIAnalyzePage() {
             </div>
           </section>
 
-          {/* Item Photo */}
+          {/* Food Photo */}
           <section className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-800">
-            {currentItem.imageData && (
+            {currentFood.imageData && (
               <div
                 className={`relative w-full ${editingBoundingBox ? 'max-h-[80vh]' : 'aspect-square'}`}
                 style={{
@@ -1267,8 +1264,8 @@ function AIAnalyzePage() {
               >
                 <img
                   ref={imageRef}
-                  src={editingBoundingBox ? currentItem.originalImageData : currentItem.imageData}
-                  alt="Item preview"
+                  src={editingBoundingBox ? currentFood.originalImageData : currentFood.imageData}
+                  alt="Food preview"
                   className={`w-full ${editingBoundingBox ? 'object-contain max-h-[80vh]' : 'h-full object-contain'}`}
                 />
 
@@ -1352,17 +1349,17 @@ function AIAnalyzePage() {
                   </div>
                 )}
 
-                {currentItem.isProcessing && (
+                {currentFood.isProcessing && (
                   <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-3">
                     <Loader2 className="w-10 h-10 animate-spin text-white" />
                     <div className="text-white text-sm font-medium px-4 py-2 bg-black/50 rounded-lg">
-                      {currentItem.processingMessage || 'Processing...'}
+                      {currentFood.processingMessage || 'Processing...'}
                     </div>
                   </div>
                 )}
 
                 {/* Edit/Save/Cancel Bounding Box Buttons */}
-                {!editingBoundingBox && !currentItem.isProcessing && currentItem.originalImageData && currentItem.metadata?.boundingBox && (
+                {!editingBoundingBox && !currentFood.isProcessing && currentFood.originalImageData && currentFood.metadata?.boundingBox && (
                   <button
                     onClick={handleStartEditBoundingBox}
                     className="absolute bottom-2 left-2 flex items-center gap-2 px-3 py-2 bg-orange-500/90 text-white rounded-lg hover:bg-orange-600 transition-all shadow-lg text-sm"
@@ -1395,30 +1392,30 @@ function AIAnalyzePage() {
                 )}
 
                 {/* AI Generate Button - top left position */}
-                {!editingBoundingBox && !currentItem.isProcessing && (currentItem.needsAIGeneration || currentItem.generatedImageData) && (
+                {!editingBoundingBox && !currentFood.isProcessing && (currentFood.needsAIGeneration || currentFood.generatedImageData) && (
                   <button
                     onClick={handleGenerateAIImage}
                     className="absolute top-2 left-2 flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-lg shadow-lg hover:from-purple-600 hover:to-pink-600 transition-all text-sm"
-                    title={currentItem.generatedImageData ? "Re-generate AI product image" : "Generate AI product image"}
+                    title={currentFood.generatedImageData ? "Re-generate AI product image" : "Generate AI product image"}
                   >
                     <Sparkles className="w-4 h-4" />
-                    {currentItem.generatedImageData ? 'Re-generate' : 'Generate AI Image'}
+                    {currentFood.generatedImageData ? 'Re-generate' : 'Generate AI Image'}
                   </button>
                 )}
 
                 {/* Re-extract Metadata Button - always on top */}
-                {!editingBoundingBox && !currentItem.isProcessing && currentItem.originalImageData && (
+                {!editingBoundingBox && !currentFood.isProcessing && currentFood.originalImageData && (
                   <button
                     onClick={handleReExtractMetadata}
                     className="absolute top-2 right-2 p-2 bg-blue-500/90 text-white rounded-lg hover:bg-blue-600 transition-all shadow-lg"
-                    title="Re-analyze original photo and replace all items from it"
+                    title="Re-analyze original photo and replace all foods from it"
                   >
                     <RefreshCw className="w-4 h-4" />
                   </button>
                 )}
 
                 {/* Toggle Between Cropped and Generated Button */}
-                {!editingBoundingBox && currentItem.croppedImageData && currentItem.generatedImageData && !currentItem.isProcessing && (
+                {!editingBoundingBox && currentFood.croppedImageData && currentFood.generatedImageData && !currentFood.isProcessing && (
                   <button
                     onClick={handleToggleImageView}
                     className="absolute bottom-2 right-2 flex items-center gap-2 px-3 py-2 bg-gray-900/90 text-white rounded-lg hover:bg-gray-800 transition-all shadow-lg text-sm"
@@ -1432,45 +1429,45 @@ function AIAnalyzePage() {
             )}
           </section>
 
-          {/* Item Details Form */}
+          {/* Food Details Form */}
           <section className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
-            <h2 className="text-lg font-semibold mb-4">Item Details</h2>
+            <h2 className="text-lg font-semibold mb-4">Food Details</h2>
 
             {/* AI Detection Info */}
-            {currentItem.confidence !== undefined && (
+            {currentFood.confidence !== undefined && (
               <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     AI Detection Confidence
                   </span>
                   <span className={`text-sm font-bold ${
-                    currentItem.confidence >= 0.85
+                    currentFood.confidence >= 0.85
                       ? 'text-green-600 dark:text-green-400'
-                      : currentItem.confidence >= 0.75
+                      : currentFood.confidence >= 0.75
                       ? 'text-blue-600 dark:text-blue-400'
                       : 'text-yellow-600 dark:text-yellow-400'
                   }`}>
-                    {Math.round(currentItem.confidence * 100)}%
+                    {Math.round(currentFood.confidence * 100)}%
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
                     className={`h-2 rounded-full transition-all ${
-                      currentItem.confidence >= 0.85
+                      currentFood.confidence >= 0.85
                         ? 'bg-green-500'
-                        : currentItem.confidence >= 0.75
+                        : currentFood.confidence >= 0.75
                         ? 'bg-blue-500'
                         : 'bg-yellow-500'
                     }`}
-                    style={{ width: `${currentItem.confidence * 100}%` }}
+                    style={{ width: `${currentFood.confidence * 100}%` }}
                   />
                 </div>
-                {currentItem.confidence < 0.75 && (
+                {currentFood.confidence < 0.75 && (
                   <p className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
                     ⚠️ Low confidence detection - please review carefully
                   </p>
                 )}
-                {currentItem.boundingBoxAdjusted && (
+                {currentFood.boundingBoxAdjusted && (
                   <p className="mt-2 text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
                     <RefreshCw className="w-3 h-3" />
                     Bounding box was automatically adjusted for better framing
@@ -1482,12 +1479,12 @@ function AIAnalyzePage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Item Name *
+                  Food Name *
                 </label>
                 <input
                   type="text"
-                  value={currentItem.name}
-                  onChange={(e) => updateCurrentItem({ name: e.target.value })}
+                  value={currentFood.name}
+                  onChange={(e) => updateCurrentFood({ name: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="e.g., Blue Grilled Chicken"
                 />
@@ -1498,8 +1495,8 @@ function AIAnalyzePage() {
                   Category *
                 </label>
                 <select
-                  value={currentItem.category}
-                  onChange={(e) => updateCurrentItem({ category: e.target.value })}
+                  value={currentFood.category}
+                  onChange={(e) => updateCurrentFood({ category: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   <option value="">Select Category</option>
@@ -1511,7 +1508,7 @@ function AIAnalyzePage() {
                   <option value="Fats">Fats</option>
                   <option value="Snacks">Snacks</option>
                   <option value="Beverages">Beverages</option>
-                  <option value="Prepared">Prepared Meals</option>
+                  <option value="Prepared Meals">Prepared Meals</option>
                 </select>
               </div>
 
@@ -1522,8 +1519,8 @@ function AIAnalyzePage() {
                 </label>
                 <input
                   type="text"
-                  value={currentItem.estimatedPortion}
-                  onChange={(e) => updateCurrentItem({ estimatedPortion: e.target.value })}
+                  value={currentFood.estimatedPortion}
+                  onChange={(e) => updateCurrentFood({ estimatedPortion: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="e.g., 1 cup (200g), 3 oz (85g)"
                 />
@@ -1537,8 +1534,8 @@ function AIAnalyzePage() {
                   </label>
                   <input
                     type="number"
-                    value={currentItem.calories}
-                    onChange={(e) => updateCurrentItem({ calories: parseFloat(e.target.value) || 0 })}
+                    value={currentFood.calories}
+                    onChange={(e) => updateCurrentFood({ calories: parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="165"
                   />
@@ -1550,8 +1547,8 @@ function AIAnalyzePage() {
                   </label>
                   <input
                     type="number"
-                    value={currentItem.protein}
-                    onChange={(e) => updateCurrentItem({ protein: parseFloat(e.target.value) || 0 })}
+                    value={currentFood.protein}
+                    onChange={(e) => updateCurrentFood({ protein: parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="31"
                   />
@@ -1563,8 +1560,8 @@ function AIAnalyzePage() {
                   </label>
                   <input
                     type="number"
-                    value={currentItem.carbs}
-                    onChange={(e) => updateCurrentItem({ carbs: parseFloat(e.target.value) || 0 })}
+                    value={currentFood.carbs}
+                    onChange={(e) => updateCurrentFood({ carbs: parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="0"
                   />
@@ -1578,8 +1575,8 @@ function AIAnalyzePage() {
                   </label>
                   <input
                     type="number"
-                    value={currentItem.fat}
-                    onChange={(e) => updateCurrentItem({ fat: parseFloat(e.target.value) || 0 })}
+                    value={currentFood.fat}
+                    onChange={(e) => updateCurrentFood({ fat: parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="3.6"
                   />
@@ -1591,8 +1588,8 @@ function AIAnalyzePage() {
                   </label>
                   <input
                     type="number"
-                    value={currentItem.fiber}
-                    onChange={(e) => updateCurrentItem({ fiber: parseFloat(e.target.value) || 0 })}
+                    value={currentFood.fiber}
+                    onChange={(e) => updateCurrentFood({ fiber: parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="0"
                   />
@@ -1604,8 +1601,8 @@ function AIAnalyzePage() {
                   </label>
                   <input
                     type="number"
-                    value={currentItem.sugar}
-                    onChange={(e) => updateCurrentItem({ sugar: parseFloat(e.target.value) || 0 })}
+                    value={currentFood.sugar}
+                    onChange={(e) => updateCurrentFood({ sugar: parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="0"
                   />
@@ -1617,8 +1614,8 @@ function AIAnalyzePage() {
                   </label>
                   <input
                     type="number"
-                    value={currentItem.sodium}
-                    onChange={(e) => updateCurrentItem({ sodium: parseFloat(e.target.value) || 0 })}
+                    value={currentFood.sodium}
+                    onChange={(e) => updateCurrentFood({ sodium: parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="74"
                   />
@@ -1633,8 +1630,8 @@ function AIAnalyzePage() {
                   </label>
                   <input
                     type="number"
-                    value={currentItem.servingSize}
-                    onChange={(e) => updateCurrentItem({ servingSize: parseFloat(e.target.value) || 100 })}
+                    value={currentFood.servingSize}
+                    onChange={(e) => updateCurrentFood({ servingSize: parseFloat(e.target.value) || 100 })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="100"
                   />
@@ -1645,8 +1642,8 @@ function AIAnalyzePage() {
                     Unit
                   </label>
                   <select
-                    value={currentItem.servingSizeUnit}
-                    onChange={(e) => updateCurrentItem({ servingSizeUnit: e.target.value })}
+                    value={currentFood.servingSizeUnit}
+                    onChange={(e) => updateCurrentFood({ servingSizeUnit: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="g">g</option>
@@ -1668,8 +1665,8 @@ function AIAnalyzePage() {
                 </label>
                 <input
                   type="text"
-                  value={currentItem.brand || ''}
-                  onChange={(e) => updateCurrentItem({ brand: e.target.value })}
+                  value={currentFood.brand || ''}
+                  onChange={(e) => updateCurrentFood({ brand: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="e.g., Perdue, Dole"
                 />
@@ -1681,10 +1678,10 @@ function AIAnalyzePage() {
                 </label>
                 <input
                   type="text"
-                  value={currentItem.tags}
-                  onChange={(e) => updateCurrentItem({ tags: e.target.value })}
+                  value={currentFood.tags}
+                  onChange={(e) => updateCurrentFood({ tags: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="#casual #summer"
+                  placeholder="e.g., #breakfast #healthy #quick"
                 />
               </div>
 
@@ -1693,8 +1690,8 @@ function AIAnalyzePage() {
                   Notes
                 </label>
                 <textarea
-                  value={currentItem.notes}
-                  onChange={(e) => updateCurrentItem({ notes: e.target.value })}
+                  value={currentFood.notes}
+                  onChange={(e) => updateCurrentFood({ notes: e.target.value })}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="Additional notes..."

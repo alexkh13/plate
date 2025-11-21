@@ -2,7 +2,7 @@
 // Uses Gemini for image understanding and metadata extraction
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import type { AIGeneratedItem } from './types'
+import type { AIGeneratedFood } from './food'
 
 // Load API key from localStorage
 function getGeminiAPIKey(): string | null {
@@ -38,7 +38,7 @@ function initializeGemini(): GoogleGenerativeAI {
 const FOOD_ANALYSIS_PROMPT = `You are an expert nutrition analyst and food recognition specialist. Analyze this image of food and extract detailed nutritional and categorization metadata.
 
 Your task:
-1. Identify what type of food item this is
+1. Identify what type of food this is
 2. Estimate the portion size and serving
 3. Calculate approximate nutrition values (calories, protein, carbs, fat)
 4. Categorize the food appropriately
@@ -177,16 +177,13 @@ async function cropImageByBoundingBox(
 async function generateCleanProductImage(
   croppedImageData: string,
   progressCallback?: (message: string, progress: number) => void,
-  itemMetadata?: {
+  foodMetadata?: {
     name?: string
     category?: string
-    color?: string
-    material?: string
-    pattern?: string
   }
 ): Promise<string> {
   try {
-    console.log('🎨 Starting image generation with metadata:', itemMetadata)
+    console.log('🎨 Starting image generation with metadata:', foodMetadata)
 
     const ai = initializeGemini()
     const model = ai.getGenerativeModel({
@@ -194,8 +191,8 @@ async function generateCleanProductImage(
     })
 
     // Build detailed food description from metadata
-    const foodDescription = itemMetadata?.name || 'food item'
-    const category = itemMetadata?.category || 'food'
+    const foodDescription = foodMetadata?.name || 'food'
+    const category = foodMetadata?.category || 'food'
 
     const prompt = `Clean up this food image for a nutrition tracking app: ${foodDescription} (${category})
 
@@ -203,7 +200,7 @@ Keep the EXACT appearance from the input image - same cooking style, portion siz
 
 Requirements:
 - Pure white background
-- Center the food item
+- Center the food
 - Square (1:1) format
 - Clean, well-lit look
 - Preserve the actual appearance, colors, and textures from the original
@@ -448,12 +445,15 @@ Return ONLY JSON array, no additional text.`
       throw new Error('Gemini returned empty response. Check console for details.')
     }
 
+    // Clean the response to remove markdown formatting
+    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '');
+
     // Extract JSON array from response
-    const jsonMatch = text.match(/\[[\s\S]*\]/)
+    const jsonMatch = cleanedText.match(/[\[\s\S]*\]/)
     if (!jsonMatch) {
       console.error('❌ Failed to extract JSON array from response')
-      console.error('Response text:', text.substring(0, 500))
-      throw new Error(`Invalid response format from Gemini. Response: ${text.substring(0, 200)}`)
+      console.error('Response text:', cleanedText.substring(0, 500))
+      throw new Error(`Invalid response format from Gemini. Response: ${cleanedText.substring(0, 200)}`)
     }
 
     console.log('✅ Extracted JSON:', jsonMatch[0].substring(0, 200))
@@ -464,7 +464,7 @@ Return ONLY JSON array, no additional text.`
 
     // Return foods with nutrition metadata including bounding boxes
     return foods.map((food: any) => ({
-      name: food.name || 'Food Item',
+      name: food.name || 'Food',
       category: food.category || 'Other',
       tags: food.tags || '',
       notes: food.notes || '',
@@ -498,17 +498,14 @@ Return ONLY JSON array, no additional text.`
 export async function generateCleanProductImageFromData(
   imageDataUrl: string,
   progressCallback?: (message: string, progress: number) => void,
-  itemMetadata?: {
+  foodMetadata?: {
     name?: string
     category?: string
-    color?: string
-    material?: string
-    pattern?: string
   }
 ): Promise<string> {
   try {
     progressCallback?.('Generating clean product image...', 10)
-    return await generateCleanProductImage(imageDataUrl, progressCallback, itemMetadata)
+    return await generateCleanProductImage(imageDataUrl, progressCallback, foodMetadata)
   } catch (error) {
     console.error('Image generation failed:', error)
     // Return original on failure
@@ -518,12 +515,12 @@ export async function generateCleanProductImageFromData(
 
 /**
  * Extract multiple foods from a single photo
- * Returns array of items, one for each detected food with AI-generated product images
+ * Returns array of foods, one for each detected food with AI-generated product images
  */
 export async function extractMultipleFoods(
   imageFile: File,
   progressCallback?: (message: string, progress: number) => void
-): Promise<AIGeneratedItem[]> {
+): Promise<AIGeneratedFood[]> {
   try {
     progressCallback?.('Initializing Gemini AI...', 5)
 
@@ -534,7 +531,7 @@ export async function extractMultipleFoods(
         temperature: 0,
         topK: 1,
         topP: 1,
-        maxOutputTokens: 8192, // More tokens for multiple items
+        maxOutputTokens: 8192, // More tokens for multiple foods
       },
     })
 
@@ -638,12 +635,15 @@ Return ONLY JSON array, no additional text.`
     console.log('🔍 Raw Gemini response:', text)
     console.log('📏 Response length:', text.length)
 
+    // Clean the response to remove markdown formatting
+    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '');
+
     // Extract JSON array from response
-    const jsonMatch = text.match(/\[[\s\S]*\]/)
+    const jsonMatch = cleanedText.match(/[\[\s\S]*\]/)
     if (!jsonMatch) {
       console.error('❌ Failed to extract JSON array from response')
-      console.error('Response text:', text.substring(0, 500))
-      throw new Error(`Invalid response format from Gemini. Response: ${text.substring(0, 200)}`)
+      console.error('Response text:', cleanedText.substring(0, 500))
+      throw new Error(`Invalid response format from Gemini. Response: ${cleanedText.substring(0, 200)}`)
     }
 
     console.log('✅ Extracted JSON:', jsonMatch[0].substring(0, 200))
@@ -654,7 +654,7 @@ Return ONLY JSON array, no additional text.`
     // Generate clean product images for each food
     progressCallback?.('Generating product images...', 60)
 
-    const items: AIGeneratedItem[] = []
+    const foodItems: AIGeneratedFood[] = []
 
     for (let i = 0; i < foods.length; i++) {
       const food = foods[i]
@@ -698,7 +698,7 @@ Return ONLY JSON array, no additional text.`
           console.warn(`🔄 Image generation attempt ${attempts} failed for food ${i + 1}:`, error)
           if (attempts >= maxAttempts) {
             console.error('❌ All generation attempts failed, using cropped image')
-            progressCallback?.(`⚠️ Using cropped image for item ${i + 1}`, progressPercent)
+            progressCallback?.(`⚠️ Using cropped image for food ${i + 1}`, progressPercent)
           } else {
             console.log(`🔄 Retrying... (attempt ${attempts + 1}/${maxAttempts})`)
             // Brief delay before retry
@@ -707,27 +707,33 @@ Return ONLY JSON array, no additional text.`
         }
       }
 
-      items.push({
-        name: food.name || `Food Item ${i + 1}`,
+      foodItems.push({
+        name: food.name || `Food ${i + 1}`,
         category: food.category || 'Other',
-        color: food.color || 'Unknown',
         tags: food.tags || '',
         notes: food.notes || '',
         confidence: food.confidence || 0.9,
         imageData: generatedImageData, // Use AI-generated product image
+        calories: food.calories || 0,
+        protein: food.protein || 0,
+        carbs: food.carbs || 0,
+        fat: food.fat || 0,
+        fiber: food.fiber || 0,
+        sugar: food.sugar || 0,
+        sodium: food.sodium || 0,
+        servingSize: food.servingSize || 100,
+        servingSizeUnit: food.servingSizeUnit || 'g',
+        estimatedPortion: food.estimatedPortion || `${food.servingSize}${food.servingSizeUnit}`,
         metadata: {
-          style: food.style,
-          occasion: food.occasion,
-          season: food.season,
-          material: food.material,
-          pattern: food.pattern,
-          secondaryColors: food.secondaryColors,
+          brand: food.brand,
+          preparedState: food.preparedState,
+          boundingBox: food.boundingBox,
         },
       })
     }
 
     progressCallback?.('Complete!', 100)
-    return items
+    return foodItems
   } catch (error) {
     console.error('Multi-food extraction failed:', error)
 
@@ -746,7 +752,7 @@ Return ONLY JSON array, no additional text.`
 export async function analyzeFoodWithGemini(
   imageFile: File,
   progressCallback?: (message: string, progress: number) => void
-): Promise<AIGeneratedItem | null> {
+): Promise<AIGeneratedFood | null> {
   try {
     progressCallback?.('Initializing Gemini AI...', 10)
 
@@ -786,8 +792,11 @@ export async function analyzeFoodWithGemini(
     const response = await result.response
     const text = response.text()
 
+    // Clean the response to remove markdown formatting
+    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '');
+
     // Parse JSON response
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       throw new Error('Invalid response format from Gemini')
     }
@@ -796,23 +805,27 @@ export async function analyzeFoodWithGemini(
 
     progressCallback?.('Complete!', 100)
 
-    // Convert to AIGeneratedItem format
+    // Convert to AIGeneratedFood format
     return {
-      name: analysis.name || 'Food Item',
+      name: analysis.name || 'Food',
       category: analysis.category || 'Other',
-      color: analysis.color || 'Unknown',
       tags: analysis.tags || '',
       notes: analysis.notes || '',
       confidence: analysis.confidence || 0.9,
       imageData: await fileToDataURL(imageFile),
-      // Store additional metadata in notes
+      calories: analysis.calories || 0,
+      protein: analysis.protein || 0,
+      carbs: analysis.carbs || 0,
+      fat: analysis.fat || 0,
+      fiber: analysis.fiber || 0,
+      sugar: analysis.sugar || 0,
+      sodium: analysis.sodium || 0,
+      servingSize: analysis.servingSize || 100,
+      servingSizeUnit: analysis.servingSizeUnit || 'g',
+      estimatedPortion: analysis.estimatedPortion || `${analysis.servingSize}${analysis.servingSizeUnit}`,
       metadata: {
-        style: analysis.style,
-        occasion: analysis.occasion,
-        season: analysis.season,
-        material: analysis.material,
-        pattern: analysis.pattern,
-        secondaryColors: analysis.secondaryColors,
+        brand: analysis.brand,
+        preparedState: analysis.preparedState,
       },
     }
   } catch (error) {
@@ -832,141 +845,19 @@ export async function analyzeFoodWithGemini(
 export async function analyzeBatchWithGemini(
   imageFiles: File[],
   progressCallback?: (current: number, total: number, message: string) => void
-): Promise<AIGeneratedItem[]> {
-  const results: AIGeneratedItem[] = []
+): Promise<AIGeneratedFood[]> {
+  const results: AIGeneratedFood[] = []
 
   for (let i = 0; i < imageFiles.length; i++) {
-    progressCallback?.(i + 1, imageFiles.length, `Analyzing item ${i + 1} of ${imageFiles.length}...`)
+    progressCallback?.(i + 1, imageFiles.length, `Analyzing food ${i + 1} of ${imageFiles.length}...`)
 
-    const item = await analyzeFoodWithGemini(imageFiles[i])
-    if (item) {
-      results.push(item)
+    const food = await analyzeFoodWithGemini(imageFiles[i])
+    if (food) {
+      results.push(food)
     }
   }
 
   return results
-}
-
-/**
- * Advanced: Generate a clean food image using Gemini + Imagen
- * This removes backgrounds and creates a professional product shot
- */
-export async function generateCleanFoodImage(
-  imageFile: File,
-  progressCallback?: (message: string, progress: number) => void
-): Promise<Blob | null> {
-  try {
-    progressCallback?.('Analyzing original image...', 20)
-
-    const ai = initializeGemini()
-    const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash' })
-
-    // First, analyze what the food looks like
-    const imageData = await fileToBase64(imageFile)
-
-    const analysisPrompt = `Describe this food item in detail for image generation. Focus on:
-- Type of food
-- Colors
-- Patterns/textures
-- Style details
-- Material appearance
-
-Keep it concise (1-2 sentences) but descriptive.`
-
-    const analysisResult = await model.generateContent([
-      {
-        inlineData: {
-          data: imageData.split(',')[1],
-          mimeType: imageFile.type,
-        },
-      },
-      analysisPrompt,
-    ])
-
-    const description = (await analysisResult.response).text()
-
-    progressCallback?.('Generating clean product image...', 60)
-
-    // Generate prompt for clean product shot
-    const imageGenPrompt = `Professional product photography: ${description}.
-Clean white background, centered, well-lit studio lighting, high quality, product catalog style, no person wearing it, flat lay or mannequin display.`
-
-    // Note: Actual image generation would require Imagen API
-    // For now, return null as this requires additional setup
-    progressCallback?.('Image generation requires Imagen API (not yet implemented)', 100)
-
-    return null
-  } catch (error) {
-    console.error('Image generation failed:', error)
-    return null
-  }
-}
-
-/**
- * Smart food extraction from person photos
- * Uses Gemini to identify food, then provides extraction
- */
-export async function extractFoodFromPhoto(
-  imageFile: File,
-  progressCallback?: (message: string, progress: number) => void
-): Promise<AIGeneratedItem | null> {
-  try {
-    progressCallback?.('Analyzing photo...', 20)
-
-    const ai = initializeGemini()
-    const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash' })
-
-    const imageData = await fileToBase64(imageFile)
-
-    const extractionPrompt = `${FOOD_ANALYSIS_PROMPT}
-
-IMPORTANT: This image shows a person wearing clothes. Focus on the main food item visible (usually upper body food like shirt, jacket, or dress). Ignore the person's face and background.`
-
-    progressCallback?.('Extracting food details...', 60)
-
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          data: imageData.split(',')[1],
-          mimeType: imageFile.type,
-        },
-      },
-      extractionPrompt,
-    ])
-
-    const response = await result.response
-    const text = response.text()
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      throw new Error('Invalid response format')
-    }
-
-    const analysis = JSON.parse(jsonMatch[0])
-
-    progressCallback?.('Complete!', 100)
-
-    return {
-      name: analysis.name || 'Food Item',
-      category: analysis.category || 'Other',
-      color: analysis.color || 'Unknown',
-      tags: analysis.tags || '',
-      notes: `${analysis.notes || ''} (Extracted from photo)`,
-      confidence: analysis.confidence || 0.85,
-      imageData: await fileToDataURL(imageFile),
-      metadata: {
-        style: analysis.style,
-        occasion: analysis.occasion,
-        season: analysis.season,
-        material: analysis.material,
-        pattern: analysis.pattern,
-        secondaryColors: analysis.secondaryColors,
-      },
-    }
-  } catch (error) {
-    console.error('Extraction failed:', error)
-    return null
-  }
 }
 
 /**
@@ -988,22 +879,19 @@ export async function isGeminiAvailable(): Promise<boolean> {
 }
 
 /**
- * Generate meal details from a collection of items
+ * Generate meal details from a collection of foods
  */
 export async function generateMealSuggestion(
-  itemNames: string[],
-  itemColors: string[],
-  itemCategories: string[]
+  foodNames: string[],
+  foodCategories: string[],
 ): Promise<{
-  name: string
-  season: string
-  occasion?: string
-  weather?: string
-  tags?: string
-  notes?: string
+  name: string;
+  mealType: string;
+  tags?: string;
+  notes?: string;
 } | null> {
   try {
-    const ai = initializeGemini()
+    const ai = initializeGemini();
     const model = ai.getGenerativeModel({
       model: 'gemini-2.0-flash',
       generationConfig: {
@@ -1012,59 +900,56 @@ export async function generateMealSuggestion(
         topP: 0.95,
         maxOutputTokens: 512,
       },
-    })
+    });
 
-    const itemsList = itemNames.map((name, i) =>
-      `${i + 1}. ${name} (${itemCategories[i]}, ${itemColors[i]})`
-    ).join('\n')
+    const foodsList = foodNames
+      .map((name, i) => `${i + 1}. ${name} (${foodCategories[i]})`)
+      .join('\n');
 
-    const prompt = `You are a professional nutrition consultant. I have the following pantry items:
+    const prompt = `You are a professional nutrition consultant. I have the following pantry foods:
 
-${itemsList}
+${foodsList}
 
-Create an meal using these items and provide:
+Create a meal using these foods and provide:
 1. A creative, catchy name for this meal
-2. The best season for this meal
-3. The occasion this meal is suitable for
-4. Weather conditions this meal works in
-5. Relevant hashtags/tags
-6. A brief styling note or description
+2. The meal type (e.g., Breakfast, Lunch, Dinner, Snack)
+3. Relevant hashtags/tags
+4. A brief description of the meal
 
 Respond ONLY with valid JSON in this exact format:
 {
-  "name": "Meal name (e.g., 'Casual Weekend Look', 'Business Chic', 'Summer Breeze')",
-  "season": "Season (Spring/Summer, Fall, Winter, All Season)",
-  "occasion": "Occasion (e.g., 'Casual', 'Work', 'Date Night', 'Party')",
-  "weather": "Weather (e.g., 'Warm', 'Cool', 'Mild', 'Cold', 'Any')",
-  "tags": "Hashtags (e.g., '#casual #comfortable #weekend')",
-  "notes": "Styling tip or brief description (1-2 sentences)"
+  "name": "Meal name (e.g., 'Sunrise Power Bowl', 'Mediterranean Chicken Salad', 'Quick & Easy Snack Plate')",
+  "mealType": "Breakfast|Lunch|Dinner|Snack",
+  "tags": "Hashtags (e.g., '#healthy #highprotein #quickmeal')",
+  "notes": "Brief description of the meal (1-2 sentences)"
 }
 
-Be creative but practical. Consider the color combinations and item types when suggesting the meal details.`
+Be creative but practical. Consider the food types when suggesting the meal details.`;
 
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const text = response.text()
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    // Clean the response to remove markdown formatting
+    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '');
 
     // Extract JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.error('Invalid response format from Gemini')
-      return null
+      console.error('Invalid response format from Gemini');
+      return null;
     }
 
-    const meal = JSON.parse(jsonMatch[0])
+    const meal = JSON.parse(jsonMatch[0]);
     return {
       name: meal.name || 'My Meal',
-      season: meal.season || 'All Season',
-      occasion: meal.occasion,
-      weather: meal.weather,
+      mealType: meal.mealType || 'Snack',
       tags: meal.tags,
       notes: meal.notes,
-    }
+    };
   } catch (error) {
-    console.error('Meal suggestion generation failed:', error)
-    return null
+    console.error('Meal suggestion generation failed:', error);
+    return null;
   }
 }
 
@@ -1080,438 +965,4 @@ function fileToBase64(file: File): Promise<string> {
 
 function fileToDataURL(file: File): Promise<string> {
   return fileToBase64(file)
-}
-
-/**
- * Helper: Create a composite image from multiple food items
- * This helps the AI understand all items as a single meal
- */
-async function createFoodComposite(itemDataUrls: string[]): Promise<string> {
-  return new Promise((resolve, reject) => {
-    try {
-      if (itemDataUrls.length === 1) {
-        resolve(itemDataUrls[0])
-        return
-      }
-
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        reject(new Error('Failed to get canvas context'))
-        return
-      }
-
-      // Load all images first
-      const imagePromises = itemDataUrls.map(dataUrl => {
-        return new Promise<HTMLImageElement>((res, rej) => {
-          const img = new Image()
-          img.onload = () => res(img)
-          img.onerror = rej
-          img.src = dataUrl
-        })
-      })
-
-      Promise.all(imagePromises).then(images => {
-        // Calculate grid layout
-        const cols = Math.min(2, images.length)
-        const rows = Math.ceil(images.length / cols)
-        const itemSize = 512 // Standard size for each item
-
-        canvas.width = itemSize * cols
-        canvas.height = itemSize * rows
-
-        // Fill with white background
-        ctx.fillStyle = '#FFFFFF'
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-        // Draw each image in grid
-        images.forEach((img, index) => {
-          const col = index % cols
-          const row = Math.floor(index / cols)
-          const x = col * itemSize
-          const y = row * itemSize
-
-          // Calculate scaling to fit in square
-          const scale = Math.min(itemSize / img.width, itemSize / img.height)
-          const scaledWidth = img.width * scale
-          const scaledHeight = img.height * scale
-          const offsetX = x + (itemSize - scaledWidth) / 2
-          const offsetY = y + (itemSize - scaledHeight) / 2
-
-          ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight)
-        })
-
-        const compositeDataUrl = canvas.toDataURL('image/jpeg', 0.95)
-        console.log(`✅ Created composite image with ${images.length} items`)
-        resolve(compositeDataUrl)
-      }).catch(reject)
-    } catch (error) {
-      reject(error)
-    }
-  })
-}
-
-/**
- * Convert SVG to PNG data URL
- */
-async function svgToPng(svgDataUrl: string, width: number = 800, height: number = 1600): Promise<string> {
-  return new Promise((resolve, reject) => {
-    try {
-      const img = new Image()
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
-        const ctx = canvas.getContext('2d')
-
-        if (!ctx) {
-          reject(new Error('Failed to get canvas context'))
-          return
-        }
-
-        // Fill with white background
-        ctx.fillStyle = '#FFFFFF'
-        ctx.fillRect(0, 0, width, height)
-
-        // Draw SVG
-        ctx.drawImage(img, 0, 0, width, height)
-
-        // Convert to PNG
-        const pngDataUrl = canvas.toDataURL('image/png', 1.0)
-        resolve(pngDataUrl)
-      }
-
-      img.onerror = () => {
-        reject(new Error('Failed to load SVG image'))
-      }
-
-      img.src = svgDataUrl
-    } catch (error) {
-      reject(error)
-    }
-  })
-}
-
-/**
- * Generate AI meal composite - Template-based mannequin approach
- * Uses a consistent mannequin template and dresses it with the meal items
- * This ensures all meals have the same consistent look and accurate item representation
- */
-export async function generateMealComposite(
-  mealFoods: Array<{ name: string; category: string; color?: string; brand?: string; tags?: string; photo: string }>,
-  progressCallback?: (message: string, progress: number) => void,
-  aspectRatio: string = '3:4' // Optimal aspect ratio for meal display
-): Promise<string> {
-  try {
-    progressCallback?.('Initializing meal composite generation...', 10)
-
-    const ai = initializeGemini()
-    const model = ai.getGenerativeModel({
-      model: 'gemini-2.5-flash-image',
-    })
-
-    progressCallback?.('Loading mannequin template...', 20)
-
-    // Get or generate mannequin template with matching aspect ratio
-    const { getMannequinTemplate } = await import('./mannequin-template')
-    const MANNEQUIN_TEMPLATE = await getMannequinTemplate(apiKey, (msg, prog) => {
-      // Scale progress from 20-40 range
-      const scaledProgress = 20 + (prog * 0.2)
-      progressCallback?.(msg, scaledProgress)
-    }, aspectRatio)
-
-    progressCallback?.('Preparing meal items...', 40)
-
-    // Build detailed, structured item descriptions
-    const itemDescriptions = mealFoods.map((item, index) => {
-      const details: string[] = [
-        `${index + 1}. ${item.category}: "${item.name}"`
-      ]
-
-      if (item.color) details.push(`   Color: ${item.color}`)
-      if (item.brand) details.push(`   Brand: ${item.brand}`)
-      if (item.tags) {
-        // Extract style keywords from tags
-        const styleTags = item.tags.split(' ').filter(tag =>
-          tag.includes('casual') || tag.includes('formal') || tag.includes('sporty') ||
-          tag.includes('elegant') || tag.includes('vintage') || tag.includes('modern')
-        ).join(', ')
-        if (styleTags) details.push(`   Style: ${styleTags}`)
-      }
-
-      return details.join('\n')
-    }).join('\n\n')
-
-    console.log('👔 Meal items for composite:\n', itemDescriptions)
-
-    // Simplified, focused prompt for accurate item placement
-    const prompt = `Dress the mannequin in this meal. The mannequin is in the first image, food items in the second image.
-
-MEAL TO CREATE:
-${itemDescriptions}
-
-CRITICAL REQUIREMENTS:
-
-1. ACCURATE ITEM PLACEMENT:
-   - Place each food item EXACTLY on the mannequin's body
-   - Top items (shirts, t-shirts, jackets) → upper body/torso
-   - Bottom items (pants, skirts, shorts) → hips and legs
-   - Outerwear (jackets, coats) → over other food
-   - Shoes → on feet
-   - Accessories → appropriate body location
-
-2. PRESERVE ITEM APPEARANCE:
-   - Keep EXACT colors from the original items (no color changes)
-   - Maintain ALL patterns, prints, logos, and design details
-   - Preserve textures and fabric appearance
-   - Each item must be clearly recognizable from the original photo
-
-3. REALISTIC FOOD ARRANGEMENT:
-   - Items should fit naturally on the mannequin's body
-   - Show realistic fabric folds and draping
-   - Food items arranged naturally
-   - Professional food display quality
-
-4. VISUAL CONSISTENCY:
-   - Pure white background (#FFFFFF)
-   - Same mannequin pose and position
-   - Professional studio lighting
-   - Clean, high-quality food catalog aesthetic
-   - Vertical portrait format
-
-5. COMPLETENESS:
-   - Include ALL ${mealFoods.length} items in the meal
-   - Each item fully visible and properly positioned
-   - Items should layer correctly (underwear → base → outerwear)
-
-Generate the meal composite now with perfect accuracy.`
-
-    progressCallback?.('Generating meal composite...', 70)
-
-    // Prepare multi-image input: mannequin template + all meal item photos
-    const parts: any[] = [
-      // First: Mannequin template as the base
-      {
-        inlineData: {
-          data: MANNEQUIN_TEMPLATE.split(',')[1],
-          mimeType: MANNEQUIN_TEMPLATE.startsWith('data:image/png') ? 'image/png' : 'image/jpeg',
-        },
-      },
-    ]
-
-    // Add all meal item photos
-    for (const item of mealFoods) {
-      parts.push({
-        inlineData: {
-          data: item.photo.split(',')[1],
-          mimeType: 'image/jpeg',
-        },
-      })
-    }
-
-    // Add text prompt last
-    parts.push({
-      text: prompt,
-    })
-
-    const generationRequest = {
-      contents: [
-        {
-          role: 'user',
-          parts,
-        },
-      ],
-      generationConfig: {
-        temperature: 0.4, // Balanced: consistent but allows natural draping
-        topK: 40,
-        topP: 0.9,
-        responseModalities: ['Image'],
-        // @ts-ignore - imageConfig not in type definitions yet
-        imageConfig: {
-          aspectRatio: aspectRatio, // Configurable aspect ratio
-        },
-      },
-    }
-
-    console.log(`📤 Sending template-based composite request (mannequin + ${mealFoods.length} items)...`)
-
-    const result = await model.generateContent(generationRequest)
-    const response = await result.response
-
-    progressCallback?.('Processing composite...', 85)
-
-    // Extract generated image from response
-    const responseParts = response.candidates?.[0]?.content?.parts || []
-    console.log('🔍 Response parts:', responseParts.length, 'part(s)')
-
-    for (const part of responseParts) {
-      if (part.inlineData) {
-        console.log('✅ Meal composite generated with template!')
-        const generatedImage = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
-
-        progressCallback?.('Composite complete!', 100)
-        return generatedImage
-      }
-    }
-
-    throw new Error('No image generated in response')
-  } catch (error) {
-    console.error('❌ Meal composite generation failed:', error)
-
-    if (error instanceof Error) {
-      if (error.message.includes('API key')) {
-        throw new Error('Please add your Google AI API key in Settings → AI Settings.')
-      }
-      throw error
-    }
-
-    throw new Error('Meal composite generation failed. Please try again.')
-  }
-}
-
-/**
- * Virtual try-on: Show how meal items would look on a user
- * Takes user's photo and meal items with metadata, generates composite result
- */
-export async function generateVirtualTryOn(
-  userPhotoDataUrl: string,
-  mealFoods: Array<{ name: string; category: string; color?: string; brand?: string; tags?: string; photo: string }>,
-  progressCallback?: (message: string, progress: number) => void
-): Promise<string> {
-  try {
-    progressCallback?.('Initializing virtual try-on...', 10)
-
-    const ai = initializeGemini()
-    const model = ai.getGenerativeModel({
-      model: 'gemini-2.5-flash-image',
-    })
-
-    progressCallback?.('Preparing meal items...', 20)
-
-    // Extract photo URLs
-    const mealFoodsDataUrls = mealFoods.map(item => item.photo)
-
-    // Create a composite image if multiple items - this helps the AI understand the complete meal
-    let foodImage: string
-    if (mealFoodsDataUrls.length > 1) {
-      console.log(`🔄 Creating composite from ${mealFoodsDataUrls.length} items...`)
-      foodImage = await createFoodComposite(mealFoodsDataUrls)
-    } else {
-      foodImage = mealFoodsDataUrls[0]
-    }
-
-    progressCallback?.('Analyzing photos...', 40)
-
-    // Build detailed item descriptions from metadata
-    const itemDescriptions = mealFoods.map((item, index) => {
-      const parts = [
-        `${index + 1}. ${item.category}: "${item.name}"`
-      ]
-      if (item.color) parts.push(`Color: ${item.color}`)
-      if (item.brand) parts.push(`Brand: ${item.brand}`)
-      if (item.tags) parts.push(`Style/Details: ${item.tags}`)
-      return parts.join(' | ')
-    }).join('\n')
-
-    console.log('👔 Meal items:', itemDescriptions)
-
-    // Build a more explicit prompt that emphasizes replacing ALL food with detailed metadata
-    const prompt = `You are performing a complete food replacement. Replace ALL of the person's food in the first photo with the meal items shown in the second photo.
-
-MEAL DETAILS - Pay close attention to these specific items:
-${itemDescriptions}
-
-CRITICAL - Replace ALL food with the items described above:
-- Top/shirt/blouse/jacket (completely replace all upper body food)
-- Bottom/pants/skirt/shorts (completely replace all lower body food)
-- Shoes/footwear (if visible in meal items)
-- Any accessories shown (hats, scarves, bags, etc.)
-
-Requirements:
-- Replace EVERY piece of visible food - do not keep ANY original food
-- Use the exact colors specified in the meal details above
-- Match the style and category of each item (e.g., if it says "casual t-shirt", make it look casual)
-- The person's face, hair, skin, body shape, and pose must stay EXACTLY the same
-- Maintain the original photo's background, lighting, and shadows
-- Make the new clothes fit naturally on their body with realistic fabric draping and wrinkles
-- Match all colors, patterns, textures, and brand aesthetics from the meal items exactly
-- Pay special attention to small details like buttons, zippers, logos, prints
-- The final image must look photorealistic as if the person is actually wearing these clothes
-
-Generate the image now with all food completely replaced according to the meal details above.`
-
-    progressCallback?.('Generating virtual try-on...', 60)
-
-    // Prepare the request with user photo and food composite
-    const parts: any[] = [
-      {
-        inlineData: {
-          data: userPhotoDataUrl.split(',')[1],
-          mimeType: 'image/jpeg',
-        },
-      },
-      {
-        inlineData: {
-          data: foodImage.split(',')[1],
-          mimeType: 'image/jpeg',
-        },
-      },
-    ]
-
-    // Add text prompt
-    parts.push({
-      text: prompt,
-    })
-
-    const generationRequest = {
-      contents: [
-        {
-          role: 'user',
-          parts,
-        },
-      ],
-      generationConfig: {
-        temperature: 0.3, // Lower temperature for more consistent food replacement
-        topK: 40,
-        topP: 0.95,
-        responseModalities: ['Image'],
-      },
-    }
-
-    console.log(`📤 Sending virtual try-on request (${mealFoods.length} items → 1 composite)...`)
-    console.log('📝 Prompt preview:', prompt.substring(0, 200) + '...')
-    console.log('📝 Full prompt length:', prompt.length, 'characters')
-
-    const result = await model.generateContent(generationRequest)
-    const response = await result.response
-
-    progressCallback?.('Processing result...', 85)
-
-    // Extract generated image from response
-    const responseParts = response.candidates?.[0]?.content?.parts || []
-    console.log('🔍 Response parts:', responseParts.length, 'part(s)')
-
-    for (const part of responseParts) {
-      if (part.inlineData) {
-        console.log('✅ Virtual try-on image generated!')
-        const generatedImage = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
-
-        progressCallback?.('Virtual try-on complete!', 100)
-        return generatedImage
-      }
-    }
-
-    throw new Error('No image generated in response')
-  } catch (error) {
-    console.error('❌ Virtual try-on failed:', error)
-
-    if (error instanceof Error) {
-      if (error.message.includes('API key')) {
-        throw new Error('Please add your Google AI API key in Settings → AI Settings.')
-      }
-      throw error
-    }
-
-    throw new Error('Virtual try-on failed. Please try again.')
-  }
 }

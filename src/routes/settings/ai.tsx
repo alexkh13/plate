@@ -95,29 +95,27 @@ function AISettingsPage() {
 
           <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
             <p>
-              <strong className="text-gray-900 dark:text-gray-100">Google Gemini</strong> is a powerful multimodal AI that understands images and generates intelligent insights.
+              <strong className="text-gray-900 dark:text-gray-100">Google Gemini</strong> is a powerful multimodal AI that understands images and generates intelligent insights about your meals.
             </p>
 
             <div className="space-y-2">
               <p className="font-medium text-gray-900 dark:text-gray-100">What it analyzes:</p>
               <ul className="list-disc list-inside space-y-1 ml-2">
-                <li><strong>Category:</strong> Top, Bottom, Dress, Shoes, etc.</li>
-                <li><strong>Colors:</strong> Primary and secondary colors</li>
-                <li><strong>Style:</strong> Casual, formal, sporty, elegant</li>
-                <li><strong>Occasion:</strong> Everyday, work, party, gym</li>
-                <li><strong>Season:</strong> Summer, winter, all-season</li>
-                <li><strong>Material:</strong> Denim, cotton, leather, etc.</li>
-                <li><strong>Pattern:</strong> Solid, striped, floral, checkered</li>
+                <li><strong>Food Items:</strong> Identifies individual ingredients and components of a meal.</li>
+                <li><strong>Cuisine Type:</strong> Determines the style of the dish (e.g., Italian, Mexican, Asian).</li>
+                <li><strong>Dish Name:</strong> Suggests a name for the meal.</li>
+                <li><strong>Nutritional Info:</strong> Provides an estimated breakdown of calories, protein, carbs, and fats.</li>
+                <li><strong>Tags:</strong> Generates descriptive tags (e.g., #breakfast, #healthy, #vegetarian).</li>
               </ul>
             </div>
 
             <div className="space-y-2">
               <p className="font-medium text-gray-900 dark:text-gray-100">Works with:</p>
               <ul className="list-disc list-inside space-y-1 ml-2">
-                <li>Photos of people wearing clothes</li>
-                <li>Flat-lay food photos</li>
-                <li>Product shots</li>
-                <li>Any food image</li>
+                <li>Photos of single food items</li>
+                <li>Pictures of entire meals</li>
+                <li>Top-down or angled food photos</li>
+                <li>Any clear image of food</li>
               </ul>
             </div>
 

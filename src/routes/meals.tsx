@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/meals')({ component: OutfitsLayout })
+export const Route = createFileRoute('/meals')({ component: MealsLayout })
 
-function OutfitsLayout() {
+function MealsLayout() {
   return <Outlet />
 }

@@ -7,7 +7,7 @@ import { useSetHeader } from '@/hooks/useHeaderConfig'
 
 export const Route = createFileRoute('/profiles/new')({ component: NewProfilePage })
 
-const EMOJI_OPTIONS = ['👔', '👗', '👠', '👟', '🎨', '✨', '💼', '🌟', '🎭', '🌸', '🔥', '💎']
+const EMOJI_OPTIONS = ['🍎', '🥦', '🥕', '🍞', '🧀', '🥩', '🍲', '🥗', '🍊', '🍚', '🍳', '🍦']
 
 function NewProfilePage() {
   const navigate = useNavigate()
@@ -97,7 +97,7 @@ function NewProfilePage() {
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Work pantry, Casual, Vintage Collection"
+                placeholder="e.g., My Kitchen, Gym Meals, Weekly Prep"
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 focus:border-transparent"
                 required
                 maxLength={50}

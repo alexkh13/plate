@@ -6,7 +6,7 @@ import type {
   AIMealAnalysis,
   AIProcessingProgress,
   AIProgressCallback,
-} from './types'
+} from './food'
 
 /**
  * Check if Gemini API is configured

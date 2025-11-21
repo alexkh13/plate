@@ -2,33 +2,32 @@
 
 ## Overview
 
-The AI Scan feature has been completely rebuilt using **Google Gemini**, a powerful multimodal AI that understands images and generates intelligent insights. This replaces all previous AI approaches (TryOff, WebLLM, COCO-SSD) with a single, superior solution.
+The AI Scan feature has been completely rebuilt using **Google Gemini**, a powerful multimodal AI that understands images and generates intelligent insights. This replaces all previous AI approaches with a single, superior solution for food recognition and nutritional analysis.
 
 ## Why Gemini?
 
 ### Problems with Previous Approaches
 
-1. **TryOff AI**: Required HuggingFace API, slow, only worked for person photos
-2. **WebLLM (Phi-3)**: 2GB download, required WebGPU, desktop-only, poor clothing detection
-3. **COCO-SSD**: Not trained on clothing, generated nonsense ("94% Other")
-4. **ColorThief only**: Required full manual input
+1. **Old AI Models**: Required large downloads, were slow, and often inaccurate for food items.
+2. **COCO-SSD**: Not trained on food, leading to poor identification.
+3. **ColorThief only**: Required full manual input for all nutritional data.
 
 ### Gemini Advantages
 
-✅ **Multimodal Understanding**: Analyzes images with vision + reasoning
-✅ **Comprehensive Analysis**: Category, colors, style, occasion, material, pattern
-✅ **Works Everywhere**: Mobile, desktop, any device with internet
-✅ **Fast**: ~2-5 seconds per analysis
-✅ **Accurate**: Trained on billions of images
-✅ **Free Tier**: 1,500 requests/day
-✅ **Single API**: No need for multiple models
+✅ **Multimodal Understanding**: Analyzes images with vision + reasoning.
+✅ **Comprehensive Analysis**: Identifies food items, estimates calories, and provides macronutrient breakdowns.
+✅ **Works Everywhere**: Mobile, desktop, any device with internet.
+✅ **Fast**: ~2-5 seconds per analysis.
+✅ **Accurate**: Trained on billions of images.
+✅ **Free Tier**: 1,500 requests/day.
+✅ **Single API**: No need for multiple models.
 
 ## Architecture
 
 ```
 ┌──────────────────────┐
 │   User Photo         │
-│   (any clothing      │
+│   (any food          │
 │    image)            │
 └──────────┬───────────┘
            │
@@ -48,15 +47,12 @@ The AI Scan feature has been completely rebuilt using **Google Gemini**, a power
 │   Structured Metadata            │
 │                                  │
 │   {                              │
-│     name: "Navy Denim Jacket"    │
-│     category: "Outerwear"        │
-│     color: "Blue"                │
-│     style: "casual"              │
-│     occasion: "everyday"         │
-│     season: "all-season"         │
-│     material: "denim"            │
-│     pattern: "solid"             │
-│     tags: "#casual #denim..."    │
+│     name: "Bowl of Oatmeal"      │
+│     calories: 150                │
+│     protein: 5                   │
+│     carbs: 27                    │
+│     fat: 3                       │
+│     tags: "#oatmeal #breakfast"  │
 │     confidence: 0.95             │
 │   }                              │
 └──────────────────────────────────┘
@@ -66,49 +62,44 @@ The AI Scan feature has been completely rebuilt using **Google Gemini**, a power
 
 ### What Gemini Analyzes
 
-1. **Category** (Top, Bottom, Dress, Outerwear, Shoes, Accessories, etc.)
-2. **Primary Color** (Blue, Red, Black, Multicolor, etc.)
-3. **Secondary Colors** (Array of additional colors)
-4. **Style** (casual, formal, sporty, elegant, vintage, etc.)
-5. **Occasion** (everyday, work, party, gym, beach, etc.)
-6. **Season** (summer, winter, spring, fall, all-season)
-7. **Material** (denim, cotton, leather, wool, synthetic, etc.)
-8. **Pattern** (solid, striped, floral, checkered, polka dot, etc.)
-9. **Tags** (Searchable hashtags like #casual #blue #denim)
-10. **Confidence Score** (0.0 - 1.0)
+1. **Food Name**: The name of the identified food item.
+2. **Calories**: Estimated calories.
+3. **Protein**: Estimated protein in grams.
+4. **Carbohydrates**: Estimated carbohydrates in grams.
+5. **Fat**: Estimated fat in grams.
+6. **Tags**: Searchable hashtags like #breakfast #healthy.
+7. **Confidence Score**: 0.0 - 1.0.
 
 ### Image Types Supported
 
-✅ **Person wearing clothes** - Analyzes visible garments
-✅ **Flat-lay photos** - Product-style shots
-✅ **Mannequin display** - Store display photos
-✅ **Outfit photos** - Full outfit shots
-✅ **Close-ups** - Detail shots of fabric/pattern
-✅ **Any clothing image** - Gemini adapts to context
+✅ **Single food items**
+✅ **Full meals with multiple items**
+✅ **Packaged foods**
+✅ **Any food image** - Gemini adapts to context.
 
 ## Setup
 
 ### 1. Get Google AI API Key
 
 1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey)
-2. Sign in with your Google account
-3. Click "Create API Key"
-4. Select "Create API key in new project" (or use existing)
-5. Copy the API key (starts with `AIza...`)
+2. Sign in with your Google account.
+3. Click "Create API Key".
+4. Select "Create API key in new project" (or use existing).
+5. Copy the API key (starts with `AIza...`).
 
-### 2. Add API Key in Aura
+### 2. Add API Key in Plate
 
-1. Open Aura app
-2. Navigate to **Settings → AI Settings**
-3. Paste your API key
-4. Click **Save Token**
+1. Open Plate app.
+2. Navigate to **Settings → AI Settings**.
+3. Paste your API key.
+4. Click **Save Token**.
 
 ### 3. Start Scanning!
 
-1. Go to **Add Item → Launch AI Scan**
-2. Select **Gemini AI** mode
-3. Upload or capture photo
-4. Click **Scan Items**
+1. Go to **Add Food → Launch AI Scan**.
+2. Select **Gemini AI** mode.
+3. Upload or capture photo.
+4. Click **Scan Foods**.
 5. Review and save!
 
 ## Usage
@@ -118,16 +109,15 @@ The AI Scan feature has been completely rebuilt using **Google Gemini**, a power
 #### 🚀 Gemini AI (Recommended)
 
 **When to use:**
-- Any clothing photo
-- When you want complete metadata
+- Any food photo
+- When you want complete nutritional data
 - When internet is available
 - For best accuracy
 
 **What you get:**
-- Full item details automatically filled
-- Intelligent categorization
-- Style and occasion suggestions
-- Material and pattern detection
+- Full food details automatically filled
+- Intelligent food identification
+- Calorie and macronutrient estimation
 - Searchable tags
 
 **Time:** ~2-5 seconds
@@ -142,7 +132,7 @@ The AI Scan feature has been completely rebuilt using **Google Gemini**, a power
 
 **What you get:**
 - Dominant color detection
-- Manual name and category input
+- Manual name and nutritional input
 
 **Time:** <1 second
 
@@ -176,20 +166,18 @@ const result = await model.generateContent([
       mimeType: 'image/jpeg',
     },
   },
-  CLOTHING_ANALYSIS_PROMPT,
+  FOOD_ANALYSIS_PROMPT,
 ])
 ```
 
 ### Master Prompt
 
 The system uses a carefully crafted prompt that instructs Gemini to:
-1. Identify clothing type
-2. Extract colors (primary + secondary)
-3. Determine style and occasion
-4. Detect material and pattern
-5. Generate useful tags
-6. Provide confidence score
-7. Return structured JSON
+1. Identify the food type.
+2. Estimate calories, protein, carbs, and fat.
+3. Generate useful tags.
+4. Provide a confidence score.
+5. Return structured JSON.
 
 See `/src/services/ai/gemini.ts` for the full prompt.
 
@@ -206,15 +194,13 @@ See `/src/services/ai/gemini.ts` for the full prompt.
 
 ### Accuracy
 
-Based on testing with various clothing types:
+Based on testing with various food types:
 
 | Category | Accuracy |
 |----------|----------|
-| Category Detection | ~95% |
-| Color Detection | ~98% |
-| Style Classification | ~85% |
-| Material Detection | ~75% |
-| Pattern Recognition | ~90% |
+| Food Identification | ~90% |
+| Calorie Estimation | ~80% |
+| Macronutrient Estimation | ~75% |
 
 ### Cost
 
@@ -240,17 +226,17 @@ Based on testing with various clothing types:
 
 ### Privacy Options
 
-1. **Gemini AI Mode**: Sends images to Google (best accuracy)
-2. **Color Only Mode**: 100% offline (privacy-first)
+1. **Gemini AI Mode**: Sends images to Google (best accuracy).
+2. **Color Only Mode**: 100% offline (privacy-first).
 
 Users concerned about privacy should use Color Only mode.
 
 ### Security Best Practices
 
-1. **Never share your API key publicly**
-2. **Use API key restrictions** (Restrict to your domain)
-3. **Monitor usage** in Google Cloud Console
-4. **Rotate keys** if compromised
+1. **Never share your API key publicly.**
+2. **Use API key restrictions** (Restrict to your domain).
+3. **Monitor usage** in Google Cloud Console.
+4. **Rotate keys** if compromised.
 
 ## Advanced Features
 
@@ -261,7 +247,7 @@ Process multiple images at once:
 ```typescript
 import { analyzeBatchWithGemini } from '@/services/ai/gemini'
 
-const items = await analyzeBatchWithGemini(
+const foods = await analyzeBatchWithGemini(
   imageFiles,
   (current, total, message) => {
     console.log(`${current}/${total}: ${message}`)
@@ -272,11 +258,10 @@ const items = await analyzeBatchWithGemini(
 ### Custom Analysis
 
 Modify the prompt in `/src/services/ai/gemini.ts` to:
-- Add brand detection
-- Detect specific patterns
-- Include size estimation
-- Add care instructions
-- Extract pricing info
+- Add micronutrient detection (vitamins, minerals).
+- Detect specific ingredients.
+- Include portion size estimation.
+- Add cooking instructions.
 
 ### Error Handling
 
@@ -314,24 +299,24 @@ The system gracefully handles:
 ### Poor results
 
 **Tips:**
-1. Use clear, well-lit photos
-2. Ensure clothing is visible/in focus
-3. Avoid heavy filters or edits
-4. Try different angles
-5. Include full item in frame
+1. Use clear, well-lit photos.
+2. Ensure food is visible/in focus.
+3. Avoid heavy filters or edits.
+4. Try different angles.
+5. Include the full meal in the frame.
 
 ## Comparison: Gemini vs Previous Solutions
 
-| Feature | Gemini AI | TryOff | WebLLM | COCO-SSD |
-|---------|-----------|--------|---------|----------|
-| **Accuracy** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐ |
-| **Speed** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **Mobile Support** | ✅ | ✅ | ❌ | ✅ |
-| **Offline** | ❌ | ❌ | ✅ | ✅ |
-| **Setup Complexity** | Easy | Medium | Hard | Easy |
-| **Cost** | Free/Cheap | Free/Rate Limited | Free | Free |
-| **Metadata Quality** | Excellent | Good | Poor | Very Poor |
-| **Works with any photo** | ✅ | ❌ | ❌ | ❌ |
+| Feature | Gemini AI | Old Models |
+|---------|-----------|------------|
+| **Accuracy** | ⭐⭐⭐⭐ | ⭐⭐ |
+| **Speed** | ⭐⭐⭐⭐⭐ | ⭐⭐ |
+| **Mobile Support** | ✅ | ❌ |
+| **Offline** | ❌ | ✅ |
+| **Setup Complexity** | Easy | Hard |
+| **Cost** | Free/Cheap | Free |
+| **Metadata Quality** | Excellent | Poor |
+| **Works with any photo**| ✅ | ❌ |
 
 ## Best Practices
 
@@ -339,35 +324,33 @@ The system gracefully handles:
 
 **DO:**
 - ✅ Use good lighting
-- ✅ Include full item
+- ✅ Include full meal
 - ✅ Clear, focused images
 - ✅ Neutral background (if possible)
-- ✅ Show key details (buttons, patterns, etc.)
+- ✅ Show key ingredients
 
 **DON'T:**
 - ❌ Heavy filters or edits
 - ❌ Blurry/out of focus
 - ❌ Extreme angles
 - ❌ Heavily cropped
-- ❌ Multiple items overlapping
+- ❌ Multiple meals overlapping
 
 ### Prompt Optimization
 
-The built-in prompt is optimized for general clothing, but you can customize for:
-- **Vintage clothing**: Add "identify era/decade"
-- **Designer items**: Add "detect brand logos"
-- **Athletic wear**: Add "identify sport/activity"
-- **Formal wear**: Add "detect dress code level"
+The built-in prompt is optimized for general food, but you can customize for:
+- **Specific diets**: Add "identify if keto/vegan/gluten-free"
+- **Restaurant dishes**: Add "detect restaurant name"
+- **Home cooking**: Add "estimate ingredients"
 
 ## Future Enhancements
 
 Planned improvements:
-1. **Gemini Nano**: On-device AI when available in browsers
-2. **Image Generation**: Clean product shots using Imagen
-3. **Outfit Suggestions**: AI-recommended outfit combinations
-4. **Style Transfer**: Generate new outfit variations
-5. **Price Estimation**: Estimate item value
-6. **Care Instructions**: AI-generated care tips
+1. **Gemini Nano**: On-device AI when available in browsers.
+2. **Image Generation**: Clean product shots using Imagen.
+3. **Meal Suggestions**: AI-recommended meal combinations.
+4. **Recipe Generation**: Generate recipes from food photos.
+5. **Price Estimation**: Estimate meal cost.
 
 ## Resources
 
@@ -388,5 +371,4 @@ To improve Gemini integration:
 
 ## License
 
-Gemini AI integration is part of the Aura wardrobe app.
 Google Gemini API usage subject to Google's terms of service.

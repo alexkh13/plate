@@ -23,7 +23,6 @@ import { Route as MealsIndexRouteImport } from './routes/meals/index'
 import { Route as TrendsTrendIdRouteImport } from './routes/trends/$trendId'
 import { Route as SettingsPrivacyRouteImport } from './routes/settings/privacy'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings/notifications'
-import { Route as SettingsMannequinRouteImport } from './routes/settings/mannequin'
 import { Route as SettingsDataRouteImport } from './routes/settings/data'
 import { Route as SettingsAiRouteImport } from './routes/settings/ai'
 import { Route as SettingsAboutRouteImport } from './routes/settings/about'
@@ -107,11 +106,6 @@ const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => SettingsRoute,
 } as any)
-const SettingsMannequinRoute = SettingsMannequinRouteImport.update({
-  id: '/mannequin',
-  path: '/mannequin',
-  getParentRoute: () => SettingsRoute,
-} as any)
 const SettingsDataRoute = SettingsDataRouteImport.update({
   id: '/data',
   path: '/data',
@@ -193,7 +187,6 @@ export interface FileRoutesByFullPath {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/data': typeof SettingsDataRoute
-  '/settings/mannequin': typeof SettingsMannequinRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/privacy': typeof SettingsPrivacyRoute
   '/trends/$trendId': typeof TrendsTrendIdRoute
@@ -220,7 +213,6 @@ export interface FileRoutesByTo {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/data': typeof SettingsDataRoute
-  '/settings/mannequin': typeof SettingsMannequinRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/privacy': typeof SettingsPrivacyRoute
   '/trends/$trendId': typeof TrendsTrendIdRoute
@@ -250,7 +242,6 @@ export interface FileRoutesById {
   '/settings/about': typeof SettingsAboutRoute
   '/settings/ai': typeof SettingsAiRoute
   '/settings/data': typeof SettingsDataRoute
-  '/settings/mannequin': typeof SettingsMannequinRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/privacy': typeof SettingsPrivacyRoute
   '/trends/$trendId': typeof TrendsTrendIdRoute
@@ -281,7 +272,6 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/ai'
     | '/settings/data'
-    | '/settings/mannequin'
     | '/settings/notifications'
     | '/settings/privacy'
     | '/trends/$trendId'
@@ -308,7 +298,6 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/ai'
     | '/settings/data'
-    | '/settings/mannequin'
     | '/settings/notifications'
     | '/settings/privacy'
     | '/trends/$trendId'
@@ -337,7 +326,6 @@ export interface FileRouteTypes {
     | '/settings/about'
     | '/settings/ai'
     | '/settings/data'
-    | '/settings/mannequin'
     | '/settings/notifications'
     | '/settings/privacy'
     | '/trends/$trendId'
@@ -466,13 +454,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsNotificationsRouteImport
       parentRoute: typeof SettingsRoute
     }
-    '/settings/mannequin': {
-      id: '/settings/mannequin'
-      path: '/mannequin'
-      fullPath: '/settings/mannequin'
-      preLoaderRoute: typeof SettingsMannequinRouteImport
-      parentRoute: typeof SettingsRoute
-    }
     '/settings/data': {
       id: '/settings/data'
       path: '/data'
@@ -580,7 +561,6 @@ interface SettingsRouteChildren {
   SettingsAboutRoute: typeof SettingsAboutRoute
   SettingsAiRoute: typeof SettingsAiRoute
   SettingsDataRoute: typeof SettingsDataRoute
-  SettingsMannequinRoute: typeof SettingsMannequinRoute
   SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsPrivacyRoute: typeof SettingsPrivacyRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
@@ -590,7 +570,6 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAboutRoute: SettingsAboutRoute,
   SettingsAiRoute: SettingsAiRoute,
   SettingsDataRoute: SettingsDataRoute,
-  SettingsMannequinRoute: SettingsMannequinRoute,
   SettingsNotificationsRoute: SettingsNotificationsRoute,
   SettingsPrivacyRoute: SettingsPrivacyRoute,
   SettingsIndexRoute: SettingsIndexRoute,

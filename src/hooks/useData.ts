@@ -239,8 +239,6 @@ export function useResetProfile() {
       queryClient.invalidateQueries({ queryKey: ['foods'] })
       queryClient.invalidateQueries({ queryKey: ['meals'] })
       queryClient.invalidateQueries({ queryKey: ['calendar_entries'] })
-      queryClient.invalidateQueries({ queryKey: ['items'] })
-      queryClient.invalidateQueries({ queryKey: ['meals'] })
     }
   })
 }
@@ -326,7 +324,6 @@ export function useCreateFood() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['foods'] })
-      queryClient.invalidateQueries({ queryKey: ['items'] })
     }
   })
 }
@@ -433,8 +430,6 @@ export function useUpdateFood() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['foods'] })
       queryClient.invalidateQueries({ queryKey: ['foods', variables.id] })
-      queryClient.invalidateQueries({ queryKey: ['items'] })
-      queryClient.invalidateQueries({ queryKey: ['items', variables.id] })
       // Invalidate meals queries to refresh meal lists
       queryClient.invalidateQueries({ queryKey: ['meals'] })
     }
@@ -458,8 +453,6 @@ export function useDeleteFood() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['foods'] })
-      queryClient.invalidateQueries({ queryKey: ['meals'] })
-      queryClient.invalidateQueries({ queryKey: ['items'] })
       queryClient.invalidateQueries({ queryKey: ['meals'] })
     }
   })
@@ -535,7 +528,7 @@ export function useMealWithFoods(id: string) {
                 }
               } : undefined
             })
-            .filter((item): item is (Food & { portion: { amount: number; unit: string; order: number } }) => item !== undefined)
+            .filter((food): food is (Food & { portion: { amount: number; unit: string; order: number } }) => food !== undefined)
         }
       : null
   }
@@ -561,7 +554,6 @@ export function useCreateMeal() {
       return meal.toJSON()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meals'] })
       queryClient.invalidateQueries({ queryKey: ['meals'] })
     }
   })
@@ -803,11 +795,11 @@ export function useBulkCreateMealFoods() {
       const now = Date.now()
 
       const mealFoods = await Promise.all(
-        data.map(async (item, index) => {
+        data.map(async (food, index) => {
           const id = `mealfood_${now}_${index}_${Math.random().toString(36).slice(2)}`
           const mealFood = await db.meal_foods.insert({
             id,
-            ...item,
+            ...food,
             createdAt: now,
             updatedAt: now
           })

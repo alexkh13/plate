@@ -37,7 +37,6 @@ function SettingsPage() {
       title: 'Preferences',
       items: [
         { icon: Sparkles, label: 'AI Settings', description: 'Configure AI and API tokens', route: '/settings/ai' },
-        { icon: User, label: 'Mannequin Template', description: 'View and manage meal preview mannequin', route: '/settings/mannequin' },
         { icon: Bell, label: 'Notifications', description: 'Manage notification settings', route: '/settings/notifications' },
       ],
     },

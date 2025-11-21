@@ -1,24 +1,5 @@
 // AI Service Type Definitions - Google Gemini Integration
 
-// Legacy type for backward compatibility (food items)
-export interface AIGeneratedItem {
-  name: string
-  category: string
-  color?: string
-  tags?: string
-  notes?: string
-  confidence: number
-  imageData: string // Base64 data URL
-  metadata?: {
-    style?: string
-    occasion?: string
-    season?: string
-    material?: string
-    pattern?: string
-    secondaryColors?: string[]
-  }
-}
-
 // Food recognition result
 export interface AIGeneratedFood {
   name: string
@@ -29,21 +10,16 @@ export interface AIGeneratedFood {
   imageData: string // Base64 data URL - cropped food item
 
   // Nutrition estimates
-  nutrition: {
-    calories: number
-    protein: number
-    carbs: number
-    fat: number
-    fiber?: number
-    sugar?: number
-    sodium?: number
-  }
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+  fiber?: number
+  sugar?: number
+  sodium?: number
 
   // Portion info
-  estimatedPortion: {
-    amount: number
-    unit: string // g, ml, oz, cup, piece, etc.
-  }
+  estimatedPortion?: string,
 
   servingSize: number
   servingSizeUnit: string
@@ -53,6 +29,19 @@ export interface AIGeneratedFood {
     ingredients?: string[]
     allergens?: string[]
     brandEstimate?: string
+    brand?: string;
+    style?: string;
+    occasion?: string;
+    season?: string;
+    material?: string;
+    pattern?: string;
+    secondaryColors?: string[];
+    boundingBox?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
   }
 }
 
