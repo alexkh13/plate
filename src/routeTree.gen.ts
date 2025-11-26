@@ -21,6 +21,7 @@ import { Route as TrendsIndexRouteImport } from './routes/trends/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as MealsIndexRouteImport } from './routes/meals/index'
 import { Route as TrendsTrendIdRouteImport } from './routes/trends/$trendId'
+import { Route as SettingsTandemRouteImport } from './routes/settings/tandem'
 import { Route as SettingsPrivacyRouteImport } from './routes/settings/privacy'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings/notifications'
 import { Route as SettingsDataRouteImport } from './routes/settings/data'
@@ -95,6 +96,11 @@ const TrendsTrendIdRoute = TrendsTrendIdRouteImport.update({
   id: '/trends/$trendId',
   path: '/trends/$trendId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsTandemRoute = SettingsTandemRouteImport.update({
+  id: '/tandem',
+  path: '/tandem',
+  getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsPrivacyRoute = SettingsPrivacyRouteImport.update({
   id: '/privacy',
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/settings/data': typeof SettingsDataRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/privacy': typeof SettingsPrivacyRoute
+  '/settings/tandem': typeof SettingsTandemRoute
   '/trends/$trendId': typeof TrendsTrendIdRoute
   '/meals/': typeof MealsIndexRoute
   '/settings/': typeof SettingsIndexRoute
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/settings/data': typeof SettingsDataRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/privacy': typeof SettingsPrivacyRoute
+  '/settings/tandem': typeof SettingsTandemRoute
   '/trends/$trendId': typeof TrendsTrendIdRoute
   '/meals': typeof MealsIndexRoute
   '/settings': typeof SettingsIndexRoute
@@ -244,6 +252,7 @@ export interface FileRoutesById {
   '/settings/data': typeof SettingsDataRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/privacy': typeof SettingsPrivacyRoute
+  '/settings/tandem': typeof SettingsTandemRoute
   '/trends/$trendId': typeof TrendsTrendIdRoute
   '/meals/': typeof MealsIndexRoute
   '/settings/': typeof SettingsIndexRoute
@@ -274,6 +283,7 @@ export interface FileRouteTypes {
     | '/settings/data'
     | '/settings/notifications'
     | '/settings/privacy'
+    | '/settings/tandem'
     | '/trends/$trendId'
     | '/meals/'
     | '/settings/'
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/settings/data'
     | '/settings/notifications'
     | '/settings/privacy'
+    | '/settings/tandem'
     | '/trends/$trendId'
     | '/meals'
     | '/settings'
@@ -328,6 +339,7 @@ export interface FileRouteTypes {
     | '/settings/data'
     | '/settings/notifications'
     | '/settings/privacy'
+    | '/settings/tandem'
     | '/trends/$trendId'
     | '/meals/'
     | '/settings/'
@@ -439,6 +451,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/trends/$trendId'
       preLoaderRoute: typeof TrendsTrendIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/settings/tandem': {
+      id: '/settings/tandem'
+      path: '/tandem'
+      fullPath: '/settings/tandem'
+      preLoaderRoute: typeof SettingsTandemRouteImport
+      parentRoute: typeof SettingsRoute
     }
     '/settings/privacy': {
       id: '/settings/privacy'
@@ -563,6 +582,7 @@ interface SettingsRouteChildren {
   SettingsDataRoute: typeof SettingsDataRoute
   SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsPrivacyRoute: typeof SettingsPrivacyRoute
+  SettingsTandemRoute: typeof SettingsTandemRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
@@ -572,6 +592,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsDataRoute: SettingsDataRoute,
   SettingsNotificationsRoute: SettingsNotificationsRoute,
   SettingsPrivacyRoute: SettingsPrivacyRoute,
+  SettingsTandemRoute: SettingsTandemRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 

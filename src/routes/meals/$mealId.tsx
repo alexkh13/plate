@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { Edit, Trash2, Plus, Flame, UtensilsCrossed, Info } from 'lucide-react'
+import { Edit, Trash2, Plus, Flame, UtensilsCrossed, Info, BarChart4 } from 'lucide-react'
 import { useMealWithFoods, useDeleteMeal, useMealFoods, useSyncMealNutrition } from '@/hooks/useData'
 import { useSetHeader } from '@/hooks/useHeaderConfig'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { calculateNetCarbs, getCarbTextColor, getCarbBorderColor, getCarbBgOpacity, calculateMealNutritionFromFoods, calculatePortionNutrition, isMealNutritionOutOfSync } from '@/utils/nutrition'
+import BolusChart from '@/components/BolusChart'
 
 export const Route = createFileRoute('/meals/$mealId')({
   component: MealDetailPage,
@@ -146,6 +147,7 @@ function MealDetailPage() {
   const syncMealNutrition = useSyncMealNutrition()
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showBolusChart, setShowBolusChart] = useState(false)
 
   // Calculate live nutrition from current food data × portion sizes
   const liveNutrition = useMemo(() => {
@@ -372,6 +374,25 @@ function MealDetailPage() {
                   Add Foods
                 </Link>
               </div>
+            )}
+          </div>
+
+          {/* Tandem Integration */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+            <div className="flex items-center justify-between p-6">
+                <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+                Tandem Integration
+                </h2>
+                <button
+                onClick={() => setShowBolusChart(!showBolusChart)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                aria-label="Toggle bolus chart"
+                >
+                <BarChart4 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                </button>
+            </div>
+            {showBolusChart && meal.timestamp && (
+                <BolusChart mealTime={new Date(meal.timestamp)} />
             )}
           </div>
 

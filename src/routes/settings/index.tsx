@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ChevronRight, Bell, Lock, Palette, Database, Info, RotateCcw, Check, X, Sparkles, User } from 'lucide-react'
+import { ChevronRight, Bell, Lock, Palette, Database, Info, RotateCcw, Check, X, Sparkles, User, Waypoints } from 'lucide-react'
 import { useTheme } from '@/hooks/useTheme'
 import { useProfile } from '@/hooks/useProfile'
 import { useResetProfile } from '@/hooks/useData'
@@ -37,6 +37,7 @@ function SettingsPage() {
       title: 'Preferences',
       items: [
         { icon: Sparkles, label: 'AI Settings', description: 'Configure AI and API tokens', route: '/settings/ai' },
+        { icon: Waypoints, label: 'Tandem Integration', description: 'Connect to t:connect for bolus data', route: '/settings/tandem' },
         { icon: Bell, label: 'Notifications', description: 'Manage notification settings', route: '/settings/notifications' },
       ],
     },
