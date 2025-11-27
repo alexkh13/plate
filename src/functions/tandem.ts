@@ -4,7 +4,9 @@ import { TConnectClient, LidBolusCompleted, LidCgmData } from '../lib/tandem'
 type TandemInput = {
   email: string
   password: string
-  mealTime: string
+  mealTime?: string
+  startTime?: string
+  endTime?: string
   region: string
 }
 
@@ -12,15 +14,25 @@ export const getBolusEvents = createServerFn({ method: 'POST' })
   .inputValidator((data: TandemInput) => data)
   .handler(async ({ data }) => {
     console.log('Server function getBolusEvents called');
-    const { email, password, mealTime: mealTimeStr, region } = data
+    const { email, password, mealTime: mealTimeStr, startTime: startTimeStr, endTime: endTimeStr, region } = data
 
-    if (!email || !password || !mealTimeStr) {
-      throw new Error('Missing email, password, or mealTime')
+    if (!email || !password) {
+      throw new Error('Missing email or password')
     }
 
-    const mealTime = new Date(mealTimeStr)
-    const startDate = new Date(mealTime.getTime() - 4 * 60 * 60 * 1000)
-    const endDate = new Date(mealTime.getTime() + 4 * 60 * 60 * 1000)
+    let startDate: Date
+    let endDate: Date
+
+    if (startTimeStr && endTimeStr) {
+      startDate = new Date(startTimeStr)
+      endDate = new Date(endTimeStr)
+    } else if (mealTimeStr) {
+      const mealTime = new Date(mealTimeStr)
+      startDate = new Date(mealTime.getTime() - 4 * 60 * 60 * 1000)
+      endDate = new Date(mealTime.getTime() + 4 * 60 * 60 * 1000)
+    } else {
+      throw new Error('Missing time range (mealTime or startTime/endTime)')
+    }
 
     console.log('Initializing TConnectClient...');
     const client = new TConnectClient(email, password, region as 'US' | 'EU' || 'EU')

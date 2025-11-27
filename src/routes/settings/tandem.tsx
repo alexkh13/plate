@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useSetHeader } from '@/hooks/useHeaderConfig'
 import { useState, useEffect } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
+import { clearTandemCache } from '../../utils/tandemCache'
 
 export const Route = createFileRoute('/settings/tandem')({
   component: TandemSettingsPage,
@@ -14,6 +15,7 @@ function TandemSettingsPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [region, setRegion] = useState('EU')
   const [isSaved, setIsSaved] = useState(false)
+  const [isCacheCleared, setIsCacheCleared] = useState(false)
 
   useEffect(() => {
     setEmail(localStorage.getItem('tandem_email') || '')
@@ -37,6 +39,12 @@ function TandemSettingsPage() {
     // Clear password field after save for security
     setPassword('') 
     setTimeout(() => setIsSaved(false), 3000)
+  }
+
+  const handleClearCache = () => {
+    clearTandemCache()
+    setIsCacheCleared(true)
+    setTimeout(() => setIsCacheCleared(false), 3000)
   }
 
   return (
@@ -117,6 +125,26 @@ function TandemSettingsPage() {
         {isSaved && (
           <div className="mt-4 text-sm text-green-600 dark:text-green-400">
             Credentials saved successfully.
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">
+          Data Management
+        </h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Clear the locally cached bolus and CGM data. This will force a re-fetch from Tandem on the next view.
+        </p>
+        <button
+            onClick={handleClearCache}
+            className="w-full px-4 py-2 bg-red-50 text-red-600 border border-red-200 font-medium rounded-lg hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30"
+        >
+            Reset Cache
+        </button>
+        {isCacheCleared && (
+          <div className="mt-4 text-sm text-green-600 dark:text-green-400">
+            Cache cleared successfully.
           </div>
         )}
       </div>

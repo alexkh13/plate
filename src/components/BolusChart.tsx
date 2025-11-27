@@ -1,7 +1,7 @@
 // src/components/BolusChart.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { getBolusEvents } from '../functions/tandem';
+import { getSmartBolusData } from '../utils/tandemCache';
 
 interface BaseEvent {
   id: number;
@@ -226,23 +226,18 @@ const BolusChart: React.FC<BolusChartProps> = ({ mealTime }) => {
       }
 
       try {
-        const result = await getBolusEvents({
-          data: {
-            email,
-            password,
-            mealTime: new Date(timestamp).toISOString(),
-            region,
-          }
-        });
+        const mealDate = new Date(timestamp);
+        const start = new Date(mealDate.getTime() - 4 * 60 * 60 * 1000);
+        const end = new Date(mealDate.getTime() + 4 * 60 * 60 * 1000);
+
+        const result = await getSmartBolusData(start, end, { email, password, region });
 
         const bolus: LidBolusCompleted[] = [];
         const cgm: LidCgmData[] = [];
 
         result.forEach((event: any) => {
-            const typedEvent = {
-                ...event,
-                eventTimestamp: new Date(event.eventTimestamp)
-            };
+            // getSmartBolusData handles Date conversion
+            const typedEvent = event;
 
             if (event.name === 'LID_BOLUS_COMPLETED') {
                 bolus.push(typedEvent as LidBolusCompleted);
