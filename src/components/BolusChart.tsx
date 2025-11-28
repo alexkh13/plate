@@ -1,5 +1,5 @@
 // src/components/BolusChart.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import * as d3 from 'd3';
 import { getSmartBolusData } from '../utils/tandemCache';
 
@@ -32,10 +32,16 @@ const D3BolusChart: React.FC<{
   mealTime: Date;
 }> = ({ cgmData, bolusData, mealTime }) => {
   const svgRef = useRef<SVGSVGElement>(null);
+  const leftAxisRef = useRef<SVGSVGElement>(null);
+  const rightAxisRef = useRef<SVGSVGElement>(null);
+  const legendRef = useRef<SVGSVGElement>(null); // New ref for sticky legend
   const containerRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null); // New ref for scroll container
+  const initialScrollPerformed = useRef<string | null>(null); // Track if initial scroll is done
+  const [containerWidth, setContainerWidth] = useState(0);
   const height = 300;
   const margin = { top: 20, right: 50, bottom: 30, left: 50 };
+  const PIXELS_PER_HOUR = 100;
 
   // Handle resize
   useEffect(() => {
@@ -43,48 +49,90 @@ const D3BolusChart: React.FC<{
     const resizeObserver = new ResizeObserver((entries) => {
       if (!entries || entries.length === 0) return;
       const entry = entries[0];
-      setWidth(entry.contentRect.width);
+      setContainerWidth(entry.contentRect.width);
     });
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
   }, []);
 
+  // Determine the min and max timestamps from all available data
+  const allTimestamps = [
+    ...cgmData.map(d => d.eventTimestamp.getTime()),
+    ...bolusData.map(d => d.eventTimestamp.getTime()),
+  ];
+
+  let minTime = new Date(mealTime.getTime() - 4 * 60 * 60 * 1000);
+  let maxTime = new Date(mealTime.getTime() + 4 * 60 * 60 * 1000);
+
+  if (allTimestamps.length > 0) {
+    minTime = new Date(Math.min(...allTimestamps));
+    maxTime = new Date(Math.max(...allTimestamps));
+  }
+
+  // Add some padding to the time domain, e.g., 1 hour before min and after max
+  minTime = new Date(minTime.getTime() - 1 * 60 * 60 * 1000);
+  maxTime = new Date(maxTime.getTime() + 1 * 60 * 60 * 1000);
+
+  // Calculate svgWidth based on the time domain
+  const timeSpanHours = (maxTime.getTime() - minTime.getTime()) / (1000 * 60 * 60);
+  // Ensure a minimum width even if timeSpan is small
+  const svgWidth = Math.max(containerWidth, timeSpanHours * PIXELS_PER_HOUR + margin.left + margin.right);
+
+  // Initial Scroll to Meal Time
+  useLayoutEffect(() => {
+    if (scrollContainerRef.current && containerWidth > 0 && svgWidth > 0) {
+      // Check if we have already scrolled for this specific mealTime
+      if (initialScrollPerformed.current !== mealTime.toISOString()) {
+        const innerWidth = svgWidth - margin.left - margin.right;
+        const xScale = d3.scaleTime()
+          .domain([minTime, maxTime])
+          .range([0, innerWidth]);
+        
+        const mealX = xScale(mealTime) + margin.left;
+        const targetScroll = mealX - containerWidth / 2;
+        scrollContainerRef.current.scrollLeft = targetScroll;
+        
+        // Mark as scrolled for this mealTime
+        initialScrollPerformed.current = mealTime.toISOString();
+      }
+    }
+  }, [svgWidth, containerWidth, mealTime, minTime, maxTime, margin.left, margin.right]);
+
+
   useEffect(() => {
-    if (!svgRef.current || width === 0) return;
+    if (!svgRef.current || !leftAxisRef.current || !rightAxisRef.current || !legendRef.current) return;
 
     const svg = d3.select(svgRef.current);
+    const leftAxisSvg = d3.select(leftAxisRef.current);
+    const rightAxisSvg = d3.select(rightAxisRef.current);
+    const legendSvg = d3.select(legendRef.current);
+    
     svg.selectAll('*').remove();
+    leftAxisSvg.selectAll('*').remove();
+    rightAxisSvg.selectAll('*').remove();
+    legendSvg.selectAll('*').remove();
 
-    const innerWidth = width - margin.left - margin.right;
+    const innerWidth = svgWidth - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
-    // Define X Scale (Time)
-    // Range: mealTime - 4h to mealTime + 4h
-    const minTime = new Date(mealTime.getTime() - 4 * 60 * 60 * 1000);
-    const maxTime = new Date(mealTime.getTime() + 4 * 60 * 60 * 1000);
-
+    // Define Scales
     const xScale = d3.scaleTime()
       .domain([minTime, maxTime])
       .range([0, innerWidth]);
 
-    // Define Y Scale (Glucose)
-    // Default to 0-400 if no data, otherwise fit data with some padding
     const maxGlucose = d3.max(cgmData, d => d.currentGlucoseDisplayValue) || 300;
     const yScaleGlucose = d3.scaleLinear()
-      .domain([0, Math.max(maxGlucose, 250)]) // Ensure at least 250 for context
+      .domain([0, Math.max(maxGlucose, 250)])
       .range([innerHeight, 0]);
 
-    // Define Y Scale (Insulin) - mapped to right axis
     const maxInsulin = d3.max(bolusData, d => d.insulindelivered) || 5;
     const yScaleInsulin = d3.scaleLinear()
       .domain([0, Math.max(maxInsulin, 10)])
       .range([innerHeight, 0]);
 
-
+    // --- Draw Main Chart ---
     const g = svg.append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
-
-    // --- Grids and Axes ---
 
     // X Axis
     const xAxis = d3.axisBottom(xScale)
@@ -94,13 +142,54 @@ const D3BolusChart: React.FC<{
     g.append('g')
       .attr('transform', `translate(0,${innerHeight})`)
       .call(xAxis)
-      .attr('color', '#9ca3af'); // tailwind gray-400
+      .attr('color', '#9ca3af');
 
-    // Y Axis Left (Glucose)
-    g.append('g')
-      .call(d3.axisLeft(yScaleGlucose).ticks(5))
+    // Meal Time Indicator
+    g.append('line')
+      .attr('x1', xScale(mealTime))
+      .attr('x2', xScale(mealTime))
+      .attr('y1', 0)
+      .attr('y2', innerHeight)
+      .attr('stroke', '#fbbf24')
+      .attr('stroke-width', 2)
+      .attr('stroke-dasharray', '4 4')
+      .attr('opacity', 0.7);
+
+    // CGM Line
+    const lineGenerator = d3.line<LidCgmData>()
+      .x(d => xScale(d.eventTimestamp))
+      .y(d => yScaleGlucose(d.currentGlucoseDisplayValue))
+      .curve(d3.curveMonotoneX);
+
+    g.append('path')
+      .datum(cgmData)
+      .attr('fill', 'none')
+      .attr('stroke', '#10b981')
+      .attr('stroke-width', 2.5)
+      .attr('d', lineGenerator);
+
+    // Bolus Events
+    g.selectAll('.bolus-bar')
+      .data(bolusData)
+      .enter()
+      .append('rect')
+      .attr('class', 'bolus-bar')
+      .attr('x', d => xScale(d.eventTimestamp) - 3)
+      .attr('y', d => yScaleInsulin(d.insulindelivered))
+      .attr('width', 6)
+      .attr('height', d => innerHeight - yScaleInsulin(d.insulindelivered))
+      .attr('fill', '#3b82f6')
+      .attr('opacity', 0.6)
+      .append('title')
+      .text(d => `Bolus: ${d.insulindelivered}u\nTime: ${d.eventTimestamp.toLocaleTimeString()}`);
+
+    // --- Draw Left Axis (Glucose) ---
+    const gLeft = leftAxisSvg.append('g')
+        .attr('transform', `translate(${margin.left}, ${margin.top})`);
+
+    gLeft.call(d3.axisLeft(yScaleGlucose).ticks(5))
       .attr('color', '#9ca3af')
-      .call(g => g.select(".domain").remove()) // Clean look
+      .call(g => g.select(".domain").remove())
       .call(g => g.append("text")
           .attr("x", -10)
           .attr("y", 10)
@@ -108,11 +197,12 @@ const D3BolusChart: React.FC<{
           .attr("text-anchor", "start")
           .text("mg/dL"));
 
-    // Y Axis Right (Insulin)
-    g.append('g')
-      .attr('transform', `translate(${innerWidth}, 0)`)
-      .call(d3.axisRight(yScaleInsulin).ticks(5))
-      .attr('color', '#3b82f6') // tailwind blue-500
+    // --- Draw Right Axis (Insulin) ---
+    const gRight = rightAxisSvg.append('g')
+        .attr('transform', `translate(0, ${margin.top})`); // Right axis starts at 0 of its container
+
+    gRight.call(d3.axisRight(yScaleInsulin).ticks(5))
+      .attr('color', '#3b82f6')
       .call(g => g.select(".domain").remove())
       .call(g => g.append("text")
           .attr("x", 10)
@@ -121,75 +211,45 @@ const D3BolusChart: React.FC<{
           .attr("text-anchor", "end")
           .text("Units"));
 
-
-    // Meal Time Indicator
-    g.append('line')
-      .attr('x1', xScale(mealTime))
-      .attr('x2', xScale(mealTime))
-      .attr('y1', 0)
-      .attr('y2', innerHeight)
-      .attr('stroke', '#fbbf24') // amber-400
-      .attr('stroke-width', 2)
-      .attr('stroke-dasharray', '4 4')
-      .attr('opacity', 0.7);
-
-
-    // --- Data Drawing ---
-
-    // 1. CGM Line
-    const lineGenerator = d3.line<LidCgmData>()
-      .x(d => xScale(d.eventTimestamp))
-      .y(d => yScaleGlucose(d.currentGlucoseDisplayValue))
-      .curve(d3.curveMonotoneX); // Smooth curve
-
-    // Draw path
-    g.append('path')
-      .datum(cgmData)
-      .attr('fill', 'none')
-      .attr('stroke', '#10b981') // emerald-500
-      .attr('stroke-width', 2.5)
-      .attr('d', lineGenerator);
-      
-    // Draw points for CGM (optional, good for hovering)
-    // Skipping for performance/cleanliness unless data is sparse
-
-    // 2. Bolus Events (Bars)
-    g.selectAll('.bolus-bar')
-      .data(bolusData)
-      .enter()
-      .append('rect')
-      .attr('class', 'bolus-bar')
-      .attr('x', d => xScale(d.eventTimestamp) - 3) // Center bar
-      .attr('y', d => yScaleInsulin(d.insulindelivered))
-      .attr('width', 6)
-      .attr('height', d => innerHeight - yScaleInsulin(d.insulindelivered))
-      .attr('fill', '#3b82f6') // blue-500
-      .attr('opacity', 0.6)
-      .append('title') // Simple tooltip
-      .text(d => `Bolus: ${d.insulindelivered}u\nTime: ${d.eventTimestamp.toLocaleTimeString()}`);
-
-
-    // Legend
-    const legend = g.append('g').attr('transform', `translate(10, 0)`);
-    
-    // Glucose Legend
+    // --- Draw Sticky Legend ---
+    const legend = legendSvg.append('g').attr('transform', `translate(${margin.left + 10}, ${margin.top})`);
     legend.append('rect').attr('x', 0).attr('y', 0).attr('width', 10).attr('height', 10).attr('fill', '#10b981');
     legend.append('text').attr('x', 15).attr('y', 10).text('Glucose').attr('fill', '#10b981').style('font-size', '12px');
-
-    // Insulin Legend
     legend.append('rect').attr('x', 70).attr('y', 0).attr('width', 10).attr('height', 10).attr('fill', '#3b82f6');
     legend.append('text').attr('x', 85).attr('y', 10).text('Bolus').attr('fill', '#3b82f6').style('font-size', '12px');
-    
-    // Meal Legend
     legend.append('line').attr('x1', 140).attr('y1', 5).attr('x2', 150).attr('y2', 5).attr('stroke', '#fbbf24').attr('stroke-width', 2).attr('stroke-dasharray', '4 4');
     legend.append('text').attr('x', 155).attr('y', 10).text('Meal').attr('fill', '#fbbf24').style('font-size', '12px');
 
-
-  }, [cgmData, bolusData, mealTime, width]);
+  }, [cgmData, bolusData, mealTime, containerWidth, svgWidth, minTime, maxTime]);
 
   return (
-    <div ref={containerRef} className="w-full relative">
-      <svg ref={svgRef} width={width} height={height} className="overflow-visible" />
+    <div ref={containerRef} className="w-full relative h-[300px]">
+      {/* Sticky Left Axis */}
+      <svg 
+        ref={leftAxisRef} 
+        width={margin.left} 
+        height={height} 
+        className="absolute left-0 top-0 z-10 bg-white/90 dark:bg-gray-900/90 pointer-events-none" 
+      />
+      
+      {/* Scrollable Chart Area */}
+      <div ref={scrollContainerRef} className="overflow-x-auto w-full h-full absolute top-0 left-0">
+        <svg ref={svgRef} width={svgWidth} height={height} className="overflow-visible" />
+      </div>
+
+      {/* Sticky Right Axis */}
+      <svg 
+        ref={rightAxisRef} 
+        width={margin.right} 
+        height={height} 
+        className="absolute right-0 top-0 z-10 bg-white/90 dark:bg-gray-900/90 pointer-events-none" 
+      />
+
+      {/* Sticky Legend */}
+      <svg 
+        ref={legendRef} 
+        className="absolute top-0 left-0 w-full h-full pointer-events-none z-20" 
+      />
     </div>
   );
 };
@@ -305,7 +365,7 @@ const BolusChart: React.FC<BolusChartProps> = ({ mealTime }) => {
       {!isLoading && !error && (bolusEvents.length > 0 || cgmEvents.length > 0) && (
         <div className="space-y-6">
             {/* D3 Chart */}
-            <div className="w-full overflow-hidden">
+            <div className="w-full overflow-x-auto">
                  <D3BolusChart 
                     cgmData={cgmEvents} 
                     bolusData={bolusEvents} 
